@@ -82,10 +82,7 @@ public:
 private slots:
     void btnPressed();
     void timer();
-    void printProjectionMatrix(std::string frameName);
-    void getImage();
-    void get25DImage();
-  
+
     void stateChangedListener(const rw::kinematics::State& state);
     std::vector<rw::math::Q> getConfigurations(const std::string nameGoal, const std::string nameTcp, rw::models::SerialDevice::Ptr robot, rw::models::WorkCell::Ptr wc, rw::kinematics::State state);
     bool checkCollisions(Device::Ptr device, const State &state, const CollisionDetector &detector, const Q &q);
@@ -104,8 +101,7 @@ private:
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
     rwlibs::simulation::GLFrameGrabber* _framegrabber;
     rwlibs::simulation::GLFrameGrabber25D* _framegrabber25D;    
-    std::vector<std::string> _cameras;
-    std::vector<std::string> _cameras25D;
+
     Device::Ptr _device;
     QPath _path;
     int _step;
