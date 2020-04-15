@@ -28,10 +28,10 @@ SET(ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_VERBOSE_MAKEFILE False)
 
 # Now set the RW/RWS root (edit this if necessary)
-#SET(RW_ROOT $ENV{RW_ROOT})
-SET(RW_ROOT ~/Apps/RobWork/RobWork/)
-#SET(RWSTUDIO_ROOT $ENV{RWS_ROOT})
-SET(RWSTUDIO_ROOT ~/Apps/RobWork/RobWorkStudio/)
+SET(RW_ROOT $ENV{RW_ROOT})
+#SET(RW_ROOT ~/Apps/RobWork/RobWork/)
+SET(RWSTUDIO_ROOT $ENV{RWS_ROOT})
+#SET(RWSTUDIO_ROOT ~/Apps/RobWork/RobWorkStudio/)
 
 # Set build type to release
 IF( NOT CMAKE_BUILD_TYPE )
