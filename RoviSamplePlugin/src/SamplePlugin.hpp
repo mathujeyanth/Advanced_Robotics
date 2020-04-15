@@ -20,7 +20,7 @@
 #include <rws/RobWorkStudioPlugin.hpp>
 
 // OpenCV 3
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 
 // Qt
 #include <fstream>
@@ -59,7 +59,7 @@ using namespace rwlibs::proximitystrategies;
 
 using namespace rws;
 
-using namespace cv;
+//using namespace cv;
 
 using namespace std::placeholders;
 
@@ -91,7 +91,7 @@ private slots:
     void createPathRRTConnect(rw::math::Vector3D<> to, double eps);
 
 private:
-    static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
+    //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 
     QTimer* _timer;
     QTimer* _timer25D;
@@ -102,7 +102,8 @@ private:
     rwlibs::simulation::GLFrameGrabber* _framegrabber;
     rwlibs::simulation::GLFrameGrabber25D* _framegrabber25D;    
 
-    Device::Ptr _device;
+    Device::Ptr _device2;
+    Device::Ptr _device1;
     QPath _path;
     int _step;
     int _attachIdx;

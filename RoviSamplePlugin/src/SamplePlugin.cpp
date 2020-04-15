@@ -22,7 +22,6 @@ SamplePlugin::SamplePlugin():
     connect(_printTest  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 
     _framegrabber = NULL;
-
 }
 
 SamplePlugin::~SamplePlugin()
@@ -37,7 +36,7 @@ void SamplePlugin::initialize() {
     getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, std::placeholders::_1), this);
 
     // Auto load workcell
-    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/student/Desktop/Project_WorkCell/Scene.wc.xml");
+    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/student/Desktop/Project/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
     getRobWorkStudio()->setWorkCell(wc);
 
 }
@@ -62,7 +61,9 @@ void SamplePlugin::open(WorkCell* workcell)
             getRobWorkStudio()->getWorkCellScene()->addRender("BackgroundImage",_bgRender,bgFrame);
         }
 
-        _device = _wc->findDevice("1_UR-6-85-5-A");
+
+        _device1 = _wc->findDevice("1_UR-6-85-5-A");
+        _device2 = _wc->findDevice("2_UR-6-85-5-A");
         _step = -1;
 
     }
@@ -99,7 +100,8 @@ void SamplePlugin::btnPressed() {
         _timer->stop();
         //rw::math::Math::seed();
         Q to(6, 1.571, -1.158, -2.728, 0.771, 1.571, 0); //From pose estimation
-        _device->setQ(to,_state);
+        _device1->setQ(to,_state);
+        _device2->setQ(to,_state);
         getRobWorkStudio()->setState(_state);
         //createPathRRTConnect(from, to, extend, maxTime);
     }
@@ -193,21 +195,21 @@ void SamplePlugin::timer() {
     if(0 <= _step && _step < _path.size()){
         if (_attachIdx == _step)
         {
-            _device -> setQ(_attachQ,_state);
+            _device1 -> setQ(_attachQ,_state);
             rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("GraspTCP"),_state);
             getRobWorkStudio()->setState(_state);
             _step++;
         }else
         {
             std::cout << _path.at(_step)(0) << " " << _path.at(_step)(1) << " " << _path.at(_step)(2) << " " << _path.at(_step)(3) << " " << _path.at(_step)(4) << " " << _path.at(_step)(5) << ";\n";
-            _device->setQ(_path.at(_step),_state);
+            _device1->setQ(_path.at(_step),_state);
             getRobWorkStudio()->setState(_state);
             _step++;
         }
 
         if (_step == _path.size())
         {
-            _device -> setQ(_deattachQ,_state);
+            _device1 -> setQ(_deattachQ,_state);
             rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("Table"),_state);
             getRobWorkStudio()->setState(_state);
         }

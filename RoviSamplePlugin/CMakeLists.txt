@@ -28,8 +28,10 @@ SET(ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_VERBOSE_MAKEFILE False)
 
 # Now set the RW/RWS root (edit this if necessary)
-SET(RW_ROOT $ENV{RW_ROOT})
-SET(RWSTUDIO_ROOT $ENV{RWS_ROOT})
+#SET(RW_ROOT $ENV{RW_ROOT})
+SET(RW_ROOT ~/Apps/RobWork/RobWork/)
+#SET(RWSTUDIO_ROOT $ENV{RWS_ROOT})
+SET(RWSTUDIO_ROOT ~/Apps/RobWork/RobWorkStudio/)
 
 # Set build type to release
 IF( NOT CMAKE_BUILD_TYPE )
@@ -52,7 +54,7 @@ INCLUDE_DIRECTORIES( ${ROBWORKSTUDIO_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${ROBWORKSTUDIO_LIBRARY_DIRS} )
 
 # Use OpenCV 3
-find_package(OpenCV 3 REQUIRED)
+#find_package(OpenCV 3 REQUIRED)
 
 # Set the output dir for generated libraries and binaries
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ROOT}/bin/${CMAKE_BUILD_TYPE}" CACHE PATH "Runtime directory" FORCE)
