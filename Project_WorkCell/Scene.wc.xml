@@ -14,18 +14,13 @@
      		</Drawable>
 	</Frame>
 
-	<Frame name="legs1" refframe="WORLD" type="Fixed">
-		<RPY>180 0 0</RPY> <Pos>0 1.2 0.6</Pos>		
-	 	<Drawable name="Table2" refframe="Table2">
-         	<Polytope file="legs" />
+	<Frame name="roof" refframe="WORLD" type="Fixed">
+		<RPY>180 0 0</RPY> <Pos>0 0.6 0.8</Pos>		
+	 	<Drawable name="roof " refframe="Table2">
+         	<Polytope file="roof" />
      		</Drawable>
 	</Frame>
-<Frame name="legs2" refframe="WORLD" type="Fixed">
-		<RPY>180 0 0</RPY> <Pos>0 0 0.6</Pos>		
-	 	<Drawable name="Table2" refframe="Table2">
-         	<Polytope file="legs" />
-     		</Drawable>
-	</Frame>
+
 
 	<!--Robot #1-->
 	<Frame name="URReference1" refframe="Table1" type="Movable">
