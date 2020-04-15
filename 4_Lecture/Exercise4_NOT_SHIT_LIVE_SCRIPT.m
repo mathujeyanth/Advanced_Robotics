@@ -15,7 +15,7 @@ dx_err = abs(TCPpos(1)-1);
 counter1=0;
 tic %Start timer
 while dy_err>0.05 || dx_err>0.05 
-   dq=(rand(1,3)-0.05)*2*pi;
+   dq=(rand(1,3)-0.5)*2*pi;
    q_new=q+dq;
    q_new=sign(q_new).*mod(q_new,pi);
    new_pos = directKin(q_new);
