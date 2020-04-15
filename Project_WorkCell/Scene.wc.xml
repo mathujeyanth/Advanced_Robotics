@@ -14,6 +14,19 @@
      		</Drawable>
 	</Frame>
 
+	<Frame name="legs1" refframe="WORLD" type="Fixed">
+		<RPY>180 0 0</RPY> <Pos>0 1.2 0.6</Pos>		
+	 	<Drawable name="Table2" refframe="Table2">
+         	<Polytope file="legs" />
+     		</Drawable>
+	</Frame>
+<Frame name="legs2" refframe="WORLD" type="Fixed">
+		<RPY>180 0 0</RPY> <Pos>0 0 0.6</Pos>		
+	 	<Drawable name="Table2" refframe="Table2">
+         	<Polytope file="legs" />
+     		</Drawable>
+	</Frame>
+
 	<!--Robot #1-->
 	<Frame name="URReference1" refframe="Table1" type="Movable">
 		<RPY>0 0 0</RPY> <Pos>0 -0.3 0.11</Pos>
@@ -51,7 +64,7 @@
 	
 		
 	<Frame name="Bottle" refframe="Table1"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0.35 0.55 0.21 </Pos>
+     <RPY> -90 0 90 </RPY> <Pos> 0.35 0 0.21 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>
