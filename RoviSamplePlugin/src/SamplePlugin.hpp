@@ -102,7 +102,8 @@ private:
     rwlibs::simulation::GLFrameGrabber* _framegrabber;
     rwlibs::simulation::GLFrameGrabber25D* _framegrabber25D;    
 
-    Device::Ptr _device;
+    Device::Ptr _device2;
+    Device::Ptr _device1;
     QPath _path;
     int _step;
     int _attachIdx;
