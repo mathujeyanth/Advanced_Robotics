@@ -1,8 +1,12 @@
 <CollisionSetup>
     <Exclude>
-	<FramePair first="Table" second="Cylinder" />
-	<FramePair first="Table" second="Square" />
-	<FramePair first="Table" second="Botle" />
-	<FramePair first="UR-6-85-5-A.Joint5" second="WSG50RefFrame" />	
+	<FramePair first="1_Table" second="Cylinder" />
+	<FramePair first="1_Table" second="Square" />
+	<FramePair first="1_Table" second="Botle" />
+	<FramePair first="2_Table" second="Cylinder" />
+	<FramePair first="2_Table" second="Square" />
+	<FramePair first="2_Table" second="Botle" />
+	<FramePair first="1_UR-6-85-5-A.Joint5" second="1_WSG50RefFrame" />	
+	<FramePair first="2_UR-6-85-5-A.Joint5" second="2_WSG50RefFrame" />	
    </Exclude>
 </CollisionSetup>
