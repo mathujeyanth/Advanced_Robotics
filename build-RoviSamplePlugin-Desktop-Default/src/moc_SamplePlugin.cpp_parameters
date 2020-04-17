@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/boostbindings
 -I/usr/include/eigen3
 -I/home/student/Workspace/RobWork/RobWork/cmake/../src
@@ -8,6 +9,16 @@
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/qhull/src
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/csgjs/src
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/assimp/include
+=======
+-I/usr/include/eigen3
+-I/home/peter/RobWork/RobWork/cmake/../src
+-I/usr/include
+-I/home/peter/RobWork/RobWork/cmake/../ext/rwyaobi
+-I/home/peter/RobWork/RobWork/cmake/../ext/rwpqp
+-I/usr/include/lua5.3
+-I/home/peter/RobWork/RobWork/cmake/../ext/qhull/src
+-I/home/peter/RobWork/RobWork/cmake/../ext/csgjs/src
+>>>>>>> e400b460d3d828727149fad74c89189fbed4d9ff
 -I/usr/include/x86_64-linux-gnu/qt5
 -I/usr/include/x86_64-linux-gnu/qt5/QtCore
 -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
@@ -29,6 +40,7 @@
 -I/usr/include/x86_64-linux-gnu/qt5/QtCore
 -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 -I/usr/include
+<<<<<<< HEAD
 -I/home/student/Workspace/RobWork/RobWorkStudio/cmake/../src
 -I/usr/include
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/boostbindings
@@ -42,9 +54,27 @@
 -I/home/student/Workspace/RobWork/RobWork/cmake/../ext/assimp/include
 -I/home/student/Workspace/RobWork/RobWorkStudio/cmake/../ext/qtpropertybrowser/src
 -I/home/student/Downloads/SEM 2/Advanced_Robotics/build-RoviSamplePlugin-Desktop-Default
+=======
+-I/home/peter/RobWork/RobWorkStudio/cmake/../src
+-I/usr/include
+-I/usr/include/eigen3
+-I/home/peter/RobWork/RobWork/cmake/../src
+-I/home/peter/RobWork/RobWork/cmake/../ext/rwyaobi
+-I/home/peter/RobWork/RobWork/cmake/../ext/rwpqp
+-I/usr/include/lua5.3
+-I/home/peter/RobWork/RobWork/cmake/../ext/qhull/src
+-I/home/peter/RobWork/RobWork/cmake/../ext/csgjs/src
+-I/home/peter/RobWork/RobWorkStudio/cmake/../ext/qtpropertybrowser/src
+-I/home/peter/Git/Advanced_Robotics/build-RoviSamplePlugin-Desktop-Default
+>>>>>>> e400b460d3d828727149fad74c89189fbed4d9ff
 -DBOOST_DISABLE_ASSERTS
 -DBOOST_DISABLE_ASSERTS
 -DQT_NO_DEBUG
 -o
+<<<<<<< HEAD
 /home/student/Downloads/SEM 2/Advanced_Robotics/build-RoviSamplePlugin-Desktop-Default/src/moc_SamplePlugin.cpp
 /home/student/Downloads/SEM 2/Advanced_Robotics/RoviSamplePlugin/src/SamplePlugin.hpp
+=======
+/home/peter/Git/Advanced_Robotics/build-RoviSamplePlugin-Desktop-Default/src/moc_SamplePlugin.cpp
+/home/peter/Git/Advanced_Robotics/RoviSamplePlugin/src/SamplePlugin.hpp
+>>>>>>> e400b460d3d828727149fad74c89189fbed4d9ff

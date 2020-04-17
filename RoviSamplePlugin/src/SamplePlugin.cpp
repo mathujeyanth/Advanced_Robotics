@@ -1,6 +1,10 @@
 #include "SamplePlugin.hpp"
 
 
+
+
+
+
 SamplePlugin::SamplePlugin():
     RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_icon.png"))
 {
@@ -36,8 +40,10 @@ void SamplePlugin::initialize() {
     getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, std::placeholders::_1), this);
 
     // Auto load workcell
-    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/student/Desktop/Project/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
+    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/peter/Git/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
     getRobWorkStudio()->setWorkCell(wc);
+    srand(time(NULL)); //Seed for random number generator - Function fRand
+
 
 }
 
@@ -114,6 +120,7 @@ void SamplePlugin::btnPressed() {
                     rw::math::Transform3D<>(rw::math::Vector3D<>(rn_x,rn_y,0.21f),
                                             rw::math::RPY<>(0,0,90*rw::math::Deg2Rad)
                                             ), _state);
+
         getRobWorkStudio()->setState(_state);
     }
     else if (obj == _btnPtP)
@@ -149,30 +156,33 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
-        std::cout << _doubleSpinBox->value() << std::endl;
-        for (int i = 0;i<10;i++)
-        {
-            _timer->stop();
-            rw::math::Math::seed();
-            auto start = std::chrono::high_resolution_clock::now();
-            createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
-            auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-            printAblePathSize.push_back(_path.size());
-            printAbleDurations.push_back(duration.count());
-        }
-        for (int i = 0;i<printAblePathSize.size();i++)
-        {
-            std::cout << printAblePathSize[i] << " ";
-        }
-        std::cout << "\n";
-        for (int i = 0;i<printAbleDurations.size();i++)
-        {
-            std::cout << printAbleDurations[i] << " ";
-        }
-        std::cout << "\n";
-        printAbleDurations.clear();
-        printAblePathSize.clear();
+//        std::cout << _doubleSpinBox->value() << std::endl;
+//        for (int i = 0;i<10;i++)
+//        {
+//            _timer->stop();
+//            rw::math::Math::seed();
+//            auto start = std::chrono::high_resolution_clock::now();
+//            createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
+//            auto stop = std::chrono::high_resolution_clock::now();
+//            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+//            printAblePathSize.push_back(_path.size());
+//            printAbleDurations.push_back(duration.count());
+//        }
+//        for (int i = 0;i<printAblePathSize.size();i++)
+//        {
+//            std::cout << printAblePathSize[i] << " ";
+//        }
+//        std::cout << "\n";
+//        for (int i = 0;i<printAbleDurations.size();i++)
+//        {
+//            std::cout << printAbleDurations[i] << " ";
+//        }
+//        std::cout << "\n";
+//        printAbleDurations.clear();
+//        printAblePathSize.clear();
+        std::cout << "printTest button" << std::endl;
+        TCMP();
+        std::cout << "printTest button - OVER" << std::endl;
     }
     else if(obj==_btn1){
         if (!_timer->isActive()){
@@ -667,5 +677,110 @@ void SamplePlugin::createPathRRTConnect(rw::math::Vector3D<> to, double eps){
     for (double s = 0.0;s<traj2.duration();s += 0.05)
         tempQPath.push_back(traj2.x(s));
     _path = tempQPath;
+
+}
+
+double SamplePlugin::fRand(double fMin, double fMax)
+{
+    //Code: https://stackoverflow.com/questions/2704521/generate-random-double-numbers-in-c
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
+
+double SamplePlugin::wrapMax(double x, double max)
+{
+    /* integer math: `(max + x % max) % max` */
+    return fmod(max + fmod(x, max), max);
+}
+/* wrap x -> [min,max) */
+double SamplePlugin::wrapMinMax(double x, double min, double max)
+{
+    return min + wrapMax(x - min, max - min);
+}
+
+struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::math::Vector3D<double> RPY;}; //Used in TCMP
+
+void SamplePlugin::TCMP(){
+    /// Find initial Q pose
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    cout << "detector " << !detector->inCollision(_state,NULL,true) << endl;
+    Q HOME(6, 1.571, -1.158, -2.728, 0.771, 1.571, 0);
+    _wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->moveTo(
+                rw::math::Transform3D<>(rw::math::Vector3D<>(0.04, 0.835, 0.21),
+                                        rw::math::RPY<>(-1.571, 0, 1.571)
+                                        ), _state);
+    getRobWorkStudio()->setState(_state);// Position of the bottle: Q[6]{0.04, 0.835, 0.11, -1.571, 0, 1.571}
+    //Random q
+    rw::math::Q qVal(6,0,0,0,0,0,0);
+    do{
+        for(int i = 0; i<6;i++){
+            qVal[i] = fRand(-M_PI,M_PI);
+        }
+        _device2->setQ(qVal,_state);
+    }
+    while(detector->inCollision(_state,NULL,true));
+
+    //Update state and get TCP pos
+    cout << "Initial config found - Qval " << qVal << endl;
+    qVal = HOME;
+    _device2->setQ(qVal,_state);
+    getRobWorkStudio()->setState(_state);
+
+    rw::kinematics::Frame* robotTCP = _wc->findFrame("2_UR-6-85-5-A.TCP");
+    rw::math::Transform3D<double> worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+
+    cout << "Postion of end " << worldTTCP.P() << " and rotation in RPY" << rw::math::RPY<double>(worldTTCP.R()) << std::endl;
+    rw::math::Vector3D<double> initPos = {0.05, 0.975, 0.247}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
+    rw::math::Vector3D<double> initRPY = {-3.142, -0.003, -1.546};
+
+
+    rw::math::RPY<double> TCPRPY = rw::math::RPY<double>(worldTTCP.R());
+    rw::math::Vector3D<double> RPYasVec = {TCPRPY[0],TCPRPY[1],TCPRPY[2]};
+
+    rw::math::Vector3D<double> RPYerr = initRPY - RPYasVec;
+    rw::math::Vector3D<double> POSerr = initPos - worldTTCP.P();
+
+    cout << "Pos " << POSerr << " \t norm(POSerr) " << POSerr.norm2() << " \n RPY " << RPYerr << " \t norm(RPY) " << RPYerr.norm2() << endl;
+    rw::math::Q qNew(6,0,0,0,0,0,0);
+    rw::math::Vector3D<double> newRPYerr;
+    rw::math::Vector3D<double> newPOSerr;
+    int counter = 0;
+    //rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.05){ //
+        //Add random dq
+        for(int i = 0; i<6;i++){
+            qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+        }
+
+        _device2->setQ(qNew,_state);
+        worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+        TCPRPY = rw::math::RPY<double>(worldTTCP.R());
+        RPYasVec = {TCPRPY[0],TCPRPY[1],TCPRPY[2]};
+        newRPYerr = initRPY - RPYasVec;
+        newPOSerr = initPos - worldTTCP.P();
+
+
+        if( ((newPOSerr.norm2() < POSerr.norm2() && RPYerr.norm2() < 0.05)) || (newPOSerr.norm2() < POSerr.norm2() && newRPYerr.norm2() < RPYerr.norm2()) && !detector->inCollision(_state,NULL,true) ){
+            qVal = qNew;
+            RPYerr = newRPYerr;
+            POSerr = newPOSerr;
+            cout << "update and Qval " << qVal << endl;
+            getRobWorkStudio()->setState(_state);
+        }
+        counter++;
+        if(counter % 10000000 == 0){
+            cout << "Counter value " << counter << endl;
+        }
+    }
+
+    cout<<"SUCCESS! CounterVal " << counter << "\t"<< qVal << endl;
+
+    std::vector<element> Tree;
+
+    Tree.push_back({1,qVal,worldTTCP.P(),RPYasVec});
+    counter = 0;
+    double maxJointStep = rw::math::Deg2Rad*10;
+
+    //while()
 
 }
