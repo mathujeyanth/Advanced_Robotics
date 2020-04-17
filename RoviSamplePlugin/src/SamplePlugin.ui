@@ -67,7 +67,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="_btn1">
+       <widget class="QPushButton" name="_btn_runPath">
         <property name="text">
          <string>Run Path</string>
         </property>

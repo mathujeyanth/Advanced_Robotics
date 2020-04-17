@@ -74,7 +74,7 @@
 	</Frame!-->
 
 <!-- Cameras -->
-
+<!--
 <Frame name="Camera_Right" refframe="WORLD" type="Movable">
 	<Pos>-0.1 1.5 0.5</Pos>
 	<RPY>0 0 -70</RPY>
@@ -91,6 +91,7 @@
 	<RPY>0 0 -25</RPY>
 	<Property name="Scanner25D" desc="[fovy,width,height]">50 640 480</Property>
 </Frame>
+-->
 
 <CollisionSetup file="SceneCollisionSetup.prox.xml" /> 
 

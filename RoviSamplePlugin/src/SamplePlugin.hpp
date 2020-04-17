@@ -96,6 +96,7 @@ private slots:
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
+    std::vector<rw::math::Vector3D<double>> linePath(rw::math::Vector3D<> start, rw::math::Vector3D<> end, double stepSize);
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
