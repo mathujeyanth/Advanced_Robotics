@@ -1,6 +1,9 @@
 #ifndef SAMPLEPLUGIN_HPP
 #define SAMPLEPLUGIN_HPP
 
+// Includes
+#include <thread>
+
 // RobWork includes
 #include <rw/models/WorkCell.hpp>
 #include <rw/kinematics/State.hpp>
@@ -97,6 +100,7 @@ private slots:
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
 
+
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 
@@ -118,6 +122,8 @@ private:
     Q _deattachQ;
     std::vector<int> printAblePathSize;
     std::vector<double> printAbleDurations;
+    std::vector<std::thread> active_threads;
+
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/

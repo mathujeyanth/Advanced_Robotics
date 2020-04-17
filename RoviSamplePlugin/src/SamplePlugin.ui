@@ -78,6 +78,16 @@
         <property name="text">
          <string>Print test</string>
         </property>
+        <property name="Stop" stdset="0">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="_stop">
+        <property name="text">
+         <string>Stop</string>
+        </property>
        </widget>
       </item>
       <item>

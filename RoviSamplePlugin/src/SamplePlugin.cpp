@@ -24,6 +24,7 @@ SamplePlugin::SamplePlugin():
     connect(_placeBottle  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
     connect(_home  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
     connect(_printTest  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+    connect(_stop  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 
     _framegrabber = NULL;
 }
@@ -101,6 +102,12 @@ void SamplePlugin::close() {
 
 void SamplePlugin::btnPressed() {
     QObject *obj = sender();
+
+    for(auto &th : active_threads){
+        th.join();
+    }
+    active_threads.clear();
+
     if (obj == _home)
     {
         _timer->stop();
@@ -181,7 +188,7 @@ void SamplePlugin::btnPressed() {
 //        printAbleDurations.clear();
 //        printAblePathSize.clear();
         std::cout << "printTest button" << std::endl;
-        TCMP();
+        active_threads.push_back(std::thread(&SamplePlugin::TCMP,this));
         std::cout << "printTest button - OVER" << std::endl;
     }
     else if(obj==_btn1){
@@ -194,6 +201,11 @@ void SamplePlugin::btnPressed() {
 
     } else if(obj==_doubleSpinBox){
         log().info() << "spin value:" << _doubleSpinBox->value() << "\n";
+    }else if(obj==_stop){
+        for(auto &th : active_threads){
+            th.detach();
+        }
+        active_threads.clear();
     }
 
 
