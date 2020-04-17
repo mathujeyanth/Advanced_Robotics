@@ -13,6 +13,7 @@
 #include <rwlibs/pathplanners/rrt/RRTQToQPlanner.hpp>
 #include <rwlibs/proximitystrategies/ProximityStrategyFactory.hpp>
 #include <rw/trajectory/LinearInterpolator.hpp>
+#include <rw/kinematics.hpp>
 
 
 // RobWorkStudio includes
@@ -89,6 +90,12 @@ private slots:
     void createPtPPath(rw::math::Vector3D<> to);
     void createPtPiPath(rw::math::Vector3D<> to);
     void createPathRRTConnect(rw::math::Vector3D<> to, double eps);
+
+    /// Task Constrained Motion Planning from lecture 4
+    void TCMP();
+    double fRand(double fMin, double fMax); //Random Double generator
+    double wrapMax(double x, double max);
+    double wrapMinMax(double x, double min, double max);
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
