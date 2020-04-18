@@ -93,6 +93,7 @@ private slots:
 
     /// Task Constrained Motion Planning from lecture 4
     void TCMP();
+    void BottlePRM();
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
