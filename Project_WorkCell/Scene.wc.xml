@@ -50,8 +50,10 @@
 		<RPY>0 0 0</RPY> <Pos>0 0 0.1</Pos>
 	</Frame>
 	
-		
-	<Frame name="Bottle" refframe="Table1"  type="Movable" daf="true" >
+	<Frame name="kuusArea" refframe="Table2" type="Fixed">
+		<RPY>180 0 -90</RPY> <Pos>0 0.90 0.50</Pos>
+	</Frame>
+	<Frame name="Bottle" refframe="Table2"  type="Movable" daf="true" >
      <RPY> -90 0 90 </RPY> <Pos> 0.35 0.55 0.21 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
@@ -62,9 +64,13 @@
 		<RPY>0 0 90</RPY> <Pos>0 0.01 0</Pos>
 	</Frame>
 
-	<!--Frame name="placeArea" refframe="Table" type="Fixed">
+	<Frame name="placeArea1" refframe="Table1" type="Fixed">
 		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.21</Pos>
-	</Frame-->
+	</Frame>
+
+	<Frame name="placeArea2" refframe="Table2" type="Fixed">
+		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.21</Pos>
+	</Frame>
 
 	<!--Frame name="Cylinder" refframe="Table"  type="Movable" daf="true" >
      		<RPY> -90 0 90 </RPY> <Pos> -0.25 0.474 0.150 </Pos>

@@ -14,13 +14,13 @@ SamplePlugin::SamplePlugin():
     connect(_timer, SIGNAL(timeout()), this, SLOT(timer()));
 
     // now connect stuff from the ui component
-    connect(_btn_im         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
-    connect(_btn_scan       ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
-    connect(_btn0           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+//    connect(_btn_im         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+//    connect(_btn_scan       ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+//    connect(_btn0           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_btn_runPath    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
-    connect(_doubleSpinBox  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
-    connect(_btnPtPi        ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
-    connect(_btnPtP         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+//    connect(_doubleSpinBox  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
+//    connect(_btnPtPi        ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+//    connect(_btnPtP         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_placeBottle    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_home           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_printTest      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
@@ -40,7 +40,7 @@ void SamplePlugin::initialize() {
     getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, std::placeholders::_1), this);
 
     // Auto load workcell
-    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/peter/Git/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
+    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/student/Desktop/Project/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
     getRobWorkStudio()->setWorkCell(wc);
     srand(time(NULL)); //Seed for random number generator - Function fRand
 
@@ -123,63 +123,39 @@ void SamplePlugin::btnPressed() {
 
         getRobWorkStudio()->setState(_state);
     }
-    else if (obj == _btnPtP)
-    {
-        // timing for processing time, geeksforgeeks.org/measure-execution-time-function-cpp
-        _timer->stop();
-        auto start = std::chrono::high_resolution_clock::now();
-        createPtPPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << _path.size() << std::endl;
-        std::cout << duration.count() / 1000 << " ms" << std::endl;
-    }
-    else if (obj==_btnPtPi)
-    {
-        _timer->stop();
-        auto start = std::chrono::high_resolution_clock::now();
-        createPtPiPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << _path.size() << std::endl;
-        std::cout << duration.count() / 1000 << " ms" << std::endl;
-    }
-    else if(obj==_btn0){
-        _timer->stop();
-        rw::math::Math::seed();
-        auto start = std::chrono::high_resolution_clock::now();
-        createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        printAblePathSize.push_back(_path.size());
-        printAbleDurations.push_back(duration.count());
-    }
+//    else if (obj == _btnPtP)
+//    {
+//        // timing for processing time, geeksforgeeks.org/measure-execution-time-function-cpp
+//        _timer->stop();
+//        auto start = std::chrono::high_resolution_clock::now();
+//        createPtPPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
+//        auto stop = std::chrono::high_resolution_clock::now();
+//        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//        std::cout << _path.size() << std::endl;
+//        std::cout << duration.count() / 1000 << " ms" << std::endl;
+//    }
+//    else if (obj==_btnPtPi)
+//    {
+//        _timer->stop();
+//        auto start = std::chrono::high_resolution_clock::now();
+//        createPtPiPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
+//        auto stop = std::chrono::high_resolution_clock::now();
+//        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//        std::cout << _path.size() << std::endl;
+//        std::cout << duration.count() / 1000 << " ms" << std::endl;
+//    }
+//    else if(obj==_btn0){
+//        _timer->stop();
+//        rw::math::Math::seed();
+//        auto start = std::chrono::high_resolution_clock::now();
+//        createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
+//        auto stop = std::chrono::high_resolution_clock::now();
+//        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+//        printAblePathSize.push_back(_path.size());
+//        printAbleDurations.push_back(duration.count());
+//    }
     else if (obj == _printTest)
     {
-//        std::cout << _doubleSpinBox->value() << std::endl;
-//        for (int i = 0;i<10;i++)
-//        {
-//            _timer->stop();
-//            rw::math::Math::seed();
-//            auto start = std::chrono::high_resolution_clock::now();
-//            createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
-//            auto stop = std::chrono::high_resolution_clock::now();
-//            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-//            printAblePathSize.push_back(_path.size());
-//            printAbleDurations.push_back(duration.count());
-//        }
-//        for (int i = 0;i<printAblePathSize.size();i++)
-//        {
-//            std::cout << printAblePathSize[i] << " ";
-//        }
-//        std::cout << "\n";
-//        for (int i = 0;i<printAbleDurations.size();i++)
-//        {
-//            std::cout << printAbleDurations[i] << " ";
-//        }
-//        std::cout << "\n";
-//        printAbleDurations.clear();
-//        printAblePathSize.clear();
         _timer->stop();
         std::cout << "printTest button" << std::endl;
         TCMP();
@@ -194,9 +170,9 @@ void SamplePlugin::btnPressed() {
         else
             _step = 0;
 
-    } else if(obj==_doubleSpinBox){
+    } /*else if(obj==_doubleSpinBox){
         log().info() << "spin value:" << _doubleSpinBox->value() << "\n";
-    }
+    }*/
 
 
 }
@@ -206,6 +182,7 @@ void SamplePlugin::timer() {
     //_wc->findDevice("WSG50")-> setQ(rw::math::Q(1, 0.055),_state);
     if(0 <= _step && _step < _path.size()){
         //std::cout << _path.at(_step)(0) << " " << _path.at(_step)(1) << " " << _path.at(_step)(2) << " " << _path.at(_step)(3) << " " << _path.at(_step)(4) << " " << _path.at(_step)(5) << ";\n";
+        _device1->setQ(_path.at(_step),_state);
         _device2->setQ(_path.at(_step),_state);
         getRobWorkStudio()->setState(_state);
         _step++;
@@ -689,11 +666,12 @@ struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::mat
 void SamplePlugin::TCMP(){
     rw::common::Timer testTimer;
     /// Find initial Q pose
+    rw::kinematics::MovableFrame::Ptr Bottle = _wc->findFrame<rw::kinematics::MovableFrame>("Bottle");
     rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
     cout << "detector " << !detector->inCollision(_state,NULL,true) << endl;
     Q HOME(6, 1.571, -1.158, -2.728, 0.771, 1.571, 0);
-    _wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->moveTo(
-                rw::math::Transform3D<>(rw::math::Vector3D<>(0.04, 0.835, 0.21),
+    Bottle->moveTo(
+                rw::math::Transform3D<>(rw::math::Vector3D<>(0.3, -0.5, 0.21),
                                         rw::math::RPY<>(-1.571, 0, 1.571)
                                         ), _state);
     getRobWorkStudio()->setState(_state);// Position of the bottle: Q[6]{0.04, 0.835, 0.11, -1.571, 0, 1.571}
@@ -717,8 +695,8 @@ void SamplePlugin::TCMP(){
     rw::math::Transform3D<double> worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
 
     cout << "Postion of end " << worldTTCP.P() << " and rotation in RPY" << rw::math::RPY<double>(worldTTCP.R()) << std::endl;
-    rw::math::Vector3D<double> initPos = {0.05, 0.975, 0.247}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
-    rw::math::Vector3D<double> initRPY = {-3.142, -0.003, -1.546};
+    rw::math::Vector3D<double> initPos = {-0.3, 1.7, 0.3}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
+    rw::math::Vector3D<double> initRPY = {0, 0, -1.546};
 
 
     rw::math::RPY<double> TCPRPY = rw::math::RPY<double>(worldTTCP.R());
@@ -735,11 +713,13 @@ void SamplePlugin::TCMP(){
     int numOfReset = 0;
     int collideCounter = 0;
     //rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    double maxJointStep = 0.05;
+    float constraints[6][2] = {{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{3.142,-3.142}};
     testTimer.resetAndResume();
-    while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.05){ //
+    while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.1){ //
         //Add random dq
         for(int i = 0; i<6;i++){
-            qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+            qNew[i] = wrapMinMax(qVal[i]+fRand(-3.142,3.142)*maxJointStep,constraints[i][1],constraints[i][0]);
         }
         //Find new TCP error
         _device2->setQ(qNew,_state);
@@ -762,7 +742,7 @@ void SamplePlugin::TCMP(){
         }
 
         counter++;
-        if(counter  == 10000){
+        if(counter  == 1000000){
             cout << "Reset robot to home and try again" << endl;
             qVal = HOME;
             _device2->setQ(qVal,_state);
@@ -772,6 +752,9 @@ void SamplePlugin::TCMP(){
             numOfReset++;
 
         }
+        if (numOfReset > 9){
+            return;
+        }
     }
 
     cout<<"Found initial configuration! CounterVal " << counter+10000*numOfReset << "\t"<< qVal << " Number of resets " << numOfReset << " Took " << testTimer.getTimeMs() << " milliseconds " << endl;
@@ -780,7 +763,9 @@ void SamplePlugin::TCMP(){
 
     Tree.push_back({1,qVal,worldTTCP.P(),RPYasVec});
     counter = 0; //Reset counter
-    double maxJointStep = 0.01; //Thus, max joint step is pi*0.05. I.e. maxJointStep value is used in generating random dq
+     //Thus, max joint step is pi*0.05. I.e. maxJointStep value is used in generating random dq
+    maxJointStep = 0.05;
+    double discretizeStep = 0.01;
 
     int treeSize = 5000;
     int idx;
@@ -788,9 +773,9 @@ void SamplePlugin::TCMP(){
 
     bool stopFlag=false;
     //############## Add goal position - given in XYZ and RPY
-    rw::math::Vector3D<double> goalPos = {0.047, 0.725, 0.59}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
-    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, -1.513};
-    double discretizeStep = 0.001;
+    rw::math::Vector3D<double> goalPos = {0, 0.90, 0.50}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
+    rw::math::Vector3D<double> goalRPY = {3.142, 0, -1.570};
+
     std::vector<rw::math::Vector3D<>> path = linePath(worldTTCP.P(),goalPos,discretizeStep);
 
     double distToCurr = (path[0]-worldTTCP.P()).norm2();
@@ -810,8 +795,8 @@ void SamplePlugin::TCMP(){
         //worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
         //oldDistToNext = (path[pathIdx+1]-worldTTCP.P()).norm2();
         //Add random dq
-        for(int i = 0; i<6;i++){
-            tempQ[i] = wrapMinMax(tempQ[i]+fRand(-M_PI,M_PI)*maxJointStep,-M_PI,M_PI);
+        for(int i = 0; i<5;i++){
+            tempQ[i] = wrapMinMax(tempQ[i]+fRand(-3.142,3.142)*maxJointStep,constraints[i][1],constraints[i][0]);
         }
 
         //Move robot and update distances
@@ -821,7 +806,7 @@ void SamplePlugin::TCMP(){
         newDistToNext = (path[currTreeSize+1]-worldTTCP.P()).norm2();
         //cout << "newDistToNext " << newDistToNext << " \tdistToCurr " << distToCurr << endl;
 
-        if( (distToCurr < discretizeStep*2) && !detector->inCollision(_state,NULL,true) ){
+        if( (distToCurr < 2*discretizeStep) && !detector->inCollision(_state,NULL,true) ){
             Tree.push_back({currTreeSize,tempQ,worldTTCP.P(),RPYasVec});
             currTreeSize++;
             //cout<<"update " << pathIdx <<"/"<<path.size()<< endl;
@@ -850,7 +835,49 @@ void SamplePlugin::TCMP(){
         _path.push_back(Tree[i].Q1);
     }
     _device2->setQ(Tree[0].Q1,_state);//Reset robot
+    blendPath();
 
+}
+
+void SamplePlugin::blendPath(){
+    rw::math::Q nextQ = _path[2];
+    rw::math::Q currentQ = _path[1];
+    rw::math::Q formerQ = _path[0];
+    rw::math::Q tempQ = formerQ-currentQ;
+    double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+    deltaD = sqrt(deltaD);
+    rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
+    rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
+            = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(_path[0],_path[1],deltaD));
+    traj.add(currentLinearIntPol);
+    for (int i = 1;i<_path.size()-2;i += 1)
+    {
+        nextQ = _path[i+2];
+        currentQ = _path[i+1];
+        formerQ = _path[i];
+        tempQ = formerQ-currentQ;
+        deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        double totalDD = deltaD;
+        currentLinearIntPol = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+
+        tempQ = currentQ-nextQ;
+        deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        totalDD = (totalDD+deltaD)*0.25;
+        rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr nextLinearIntPol
+                = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(currentQ,nextQ,deltaD));
+        rw::trajectory::ParabolicBlend<rw::math::Q>::Ptr paraBlend1
+                = ownedPtr(new rw::trajectory::ParabolicBlend<rw::math::Q>(currentLinearIntPol,nextLinearIntPol,totalDD));
+        if (i == 1)
+            traj.add(currentLinearIntPol);
+        traj.add(paraBlend1,nextLinearIntPol);
+    }
+
+    QPath tempQPath;
+    for (double s = 0.0;s<traj.duration();s += 0.05)
+        tempQPath.push_back(traj.x(s));
+    _path = tempQPath;
 }
 
 std::vector<rw::math::Vector3D<double>> SamplePlugin::linePath(rw::math::Vector3D<> start,rw::math::Vector3D<> end, double stepSize){
