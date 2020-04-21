@@ -186,7 +186,8 @@ void SamplePlugin::btnPressed() {
 //        printAblePathSize.clear();
         _timer->stop();
         std::cout << "printTest button" << std::endl;
-        TCMP();
+        double constraints[3][2] = {{0,0},{1,0.877},{0,0}};
+        TCMP(constraints);
         _attachIdx = -1;
         std::cout << "printTest button - OVER" << std::endl;
     }
@@ -690,7 +691,15 @@ double SamplePlugin::wrapMinMax(double x, double min, double max)
 
 struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::math::Vector3D<double> RPY;}; //Used in TCMP
 
-void SamplePlugin::TCMP(){
+void SamplePlugin::TCMP(double constraints[][2]){
+    //Find number of constraints
+    int numOfConstraints;
+    for(int i=0; i<3;i++){
+        if(constraints[i][0] == 1){
+         numOfConstraints++;
+        }
+    }
+
     rw::common::Timer testTimer;
     /// Find initial Q pose
     rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
@@ -796,9 +805,9 @@ void SamplePlugin::TCMP(){
 
     bool stopFlag=false;
     //############## Add goal position - given in XYZ and RPY
-    rw::math::Vector3D<double> goalPos = {0.047, 0.725, 0.59}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
-    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, -1.513};
-    double discretizeStep = 0.001;
+    rw::math::Vector3D<double> goalPos = {-0.36, 0.928, 0.262}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
+    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, -1.513}; //Other side of boxes: Q[6]{-0.36, 0.928, 0.262, -3.123, 0.033, -1.551}
+    double discretizeStep = 0.05;
     std::vector<rw::math::Vector3D<>> path = linePath(worldTTCP.P(),goalPos,discretizeStep);
 
     double distToCurr = (path[0]-worldTTCP.P()).norm2();
@@ -832,6 +841,7 @@ void SamplePlugin::TCMP(){
         distToCurr = (path[currTreeSize]-worldTTCP.P()).norm2();
         newDistToNext = (path[currTreeSize+1]-worldTTCP.P()).norm2();
         //cout << "newDistToNext " << newDistToNext << " \tdistToCurr " << distToCurr << endl;
+
 
         if( (distToCurr < discretizeStep*2) && !detector->inCollision(_state,NULL,true) ){
             Tree.push_back({currTreeSize,tempQ,worldTTCP.P(),RPYasVec});
@@ -881,4 +891,41 @@ std::vector<rw::math::Vector3D<double>> SamplePlugin::linePath(rw::math::Vector3
     return path;
 }
 
-
+void SamplePlugin::blendPath(){
+    rw::math::Q nextQ = _path[2];
+    rw::math::Q currentQ = _path[1];
+    rw::math::Q formerQ = _path[0];
+    rw::math::Q tempQ = formerQ-currentQ;
+    double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+    deltaD = sqrt(deltaD);
+    rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
+    rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
+            = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(_path[0],_path[1],deltaD));
+    traj.add(currentLinearIntPol);
+    for (int i = 1;i<_path.size()-2;i += 1)
+    {
+        nextQ = _path[i+2];
+        currentQ = _path[i+1];
+        formerQ = _path[i];
+        tempQ = formerQ-currentQ;
+        deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        double totalDD = deltaD;
+        currentLinearIntPol = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+        tempQ = currentQ-nextQ;
+        deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        totalDD = (totalDD+deltaD)*0.25;
+        rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr nextLinearIntPol
+                = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(currentQ,nextQ,deltaD));
+        rw::trajectory::ParabolicBlend<rw::math::Q>::Ptr paraBlend1
+                = ownedPtr(new rw::trajectory::ParabolicBlend<rw::math::Q>(currentLinearIntPol,nextLinearIntPol,totalDD));
+        if (i == 1)
+            traj.add(currentLinearIntPol);
+        traj.add(paraBlend1,nextLinearIntPol);
+    }
+    QPath tempQPath;
+    for (double s = 0.0;s<traj.duration();s += 0.05)
+        tempQPath.push_back(traj.x(s));
+    _path = tempQPath;
+}

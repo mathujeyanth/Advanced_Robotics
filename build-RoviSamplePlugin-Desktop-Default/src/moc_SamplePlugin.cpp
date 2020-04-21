@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_SamplePlugin_t {
-    QByteArrayData data[44];
-    char stringdata0[486];
+    QByteArrayData data[47];
+    char stringdata0[520];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -63,19 +63,22 @@ QT_MOC_LITERAL(27, 327, 14), // "createPtPiPath"
 QT_MOC_LITERAL(28, 342, 20), // "createPathRRTConnect"
 QT_MOC_LITERAL(29, 363, 3), // "eps"
 QT_MOC_LITERAL(30, 367, 4), // "TCMP"
-QT_MOC_LITERAL(31, 372, 5), // "fRand"
-QT_MOC_LITERAL(32, 378, 4), // "fMin"
-QT_MOC_LITERAL(33, 383, 4), // "fMax"
-QT_MOC_LITERAL(34, 388, 7), // "wrapMax"
-QT_MOC_LITERAL(35, 396, 1), // "x"
-QT_MOC_LITERAL(36, 398, 3), // "max"
-QT_MOC_LITERAL(37, 402, 10), // "wrapMinMax"
-QT_MOC_LITERAL(38, 413, 3), // "min"
-QT_MOC_LITERAL(39, 417, 8), // "linePath"
-QT_MOC_LITERAL(40, 426, 40), // "std::vector<rw::math::Vector3..."
-QT_MOC_LITERAL(41, 467, 5), // "start"
-QT_MOC_LITERAL(42, 473, 3), // "end"
-QT_MOC_LITERAL(43, 477, 8) // "stepSize"
+QT_MOC_LITERAL(31, 372, 11), // "double[][2]"
+QT_MOC_LITERAL(32, 384, 11), // "constraints"
+QT_MOC_LITERAL(33, 396, 5), // "fRand"
+QT_MOC_LITERAL(34, 402, 4), // "fMin"
+QT_MOC_LITERAL(35, 407, 4), // "fMax"
+QT_MOC_LITERAL(36, 412, 7), // "wrapMax"
+QT_MOC_LITERAL(37, 420, 1), // "x"
+QT_MOC_LITERAL(38, 422, 3), // "max"
+QT_MOC_LITERAL(39, 426, 10), // "wrapMinMax"
+QT_MOC_LITERAL(40, 437, 3), // "min"
+QT_MOC_LITERAL(41, 441, 8), // "linePath"
+QT_MOC_LITERAL(42, 450, 40), // "std::vector<rw::math::Vector3..."
+QT_MOC_LITERAL(43, 491, 5), // "start"
+QT_MOC_LITERAL(44, 497, 3), // "end"
+QT_MOC_LITERAL(45, 501, 8), // "stepSize"
+QT_MOC_LITERAL(46, 510, 9) // "blendPath"
 
     },
     "SamplePlugin\0btnPressed\0\0timer\0"
@@ -88,10 +91,10 @@ QT_MOC_LITERAL(43, 477, 8) // "stepSize"
     "State\0CollisionDetector\0detector\0Q\0q\0"
     "createPtPPath\0rw::math::Vector3D<>\0"
     "to\0createPtPiPath\0createPathRRTConnect\0"
-    "eps\0TCMP\0fRand\0fMin\0fMax\0wrapMax\0x\0"
-    "max\0wrapMinMax\0min\0linePath\0"
-    "std::vector<rw::math::Vector3D<double> >\0"
-    "start\0end\0stepSize"
+    "eps\0TCMP\0double[][2]\0constraints\0fRand\0"
+    "fMin\0fMax\0wrapMax\0x\0max\0wrapMinMax\0"
+    "min\0linePath\0std::vector<rw::math::Vector3D<double> >\0"
+    "start\0end\0stepSize\0blendPath"
 };
 #undef QT_MOC_LITERAL
 
@@ -101,7 +104,7 @@ static const uint qt_meta_data_SamplePlugin[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      13,   14, // methods
+      14,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -109,19 +112,20 @@ static const uint qt_meta_data_SamplePlugin[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   79,    2, 0x08 /* Private */,
-       3,    0,   80,    2, 0x08 /* Private */,
-       4,    1,   81,    2, 0x08 /* Private */,
-       7,    5,   84,    2, 0x08 /* Private */,
-      16,    4,   95,    2, 0x08 /* Private */,
-      24,    1,  104,    2, 0x08 /* Private */,
-      27,    1,  107,    2, 0x08 /* Private */,
-      28,    2,  110,    2, 0x08 /* Private */,
-      30,    0,  115,    2, 0x08 /* Private */,
-      31,    2,  116,    2, 0x08 /* Private */,
-      34,    2,  121,    2, 0x08 /* Private */,
-      37,    3,  126,    2, 0x08 /* Private */,
+       1,    0,   84,    2, 0x08 /* Private */,
+       3,    0,   85,    2, 0x08 /* Private */,
+       4,    1,   86,    2, 0x08 /* Private */,
+       7,    5,   89,    2, 0x08 /* Private */,
+      16,    4,  100,    2, 0x08 /* Private */,
+      24,    1,  109,    2, 0x08 /* Private */,
+      27,    1,  112,    2, 0x08 /* Private */,
+      28,    2,  115,    2, 0x08 /* Private */,
+      30,    1,  120,    2, 0x08 /* Private */,
+      33,    2,  123,    2, 0x08 /* Private */,
+      36,    2,  128,    2, 0x08 /* Private */,
       39,    3,  133,    2, 0x08 /* Private */,
+      41,    3,  140,    2, 0x08 /* Private */,
+      46,    0,  147,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -132,11 +136,12 @@ static const uint qt_meta_data_SamplePlugin[] = {
     QMetaType::Void, 0x80000000 | 25,   26,
     QMetaType::Void, 0x80000000 | 25,   26,
     QMetaType::Void, 0x80000000 | 25, QMetaType::Double,   26,   29,
+    QMetaType::Void, 0x80000000 | 31,   32,
+    QMetaType::Double, QMetaType::Double, QMetaType::Double,   34,   35,
+    QMetaType::Double, QMetaType::Double, QMetaType::Double,   37,   38,
+    QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double,   37,   40,   38,
+    0x80000000 | 42, 0x80000000 | 25, 0x80000000 | 25, QMetaType::Double,   43,   44,   45,
     QMetaType::Void,
-    QMetaType::Double, QMetaType::Double, QMetaType::Double,   32,   33,
-    QMetaType::Double, QMetaType::Double, QMetaType::Double,   35,   36,
-    QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double,   35,   38,   36,
-    0x80000000 | 40, 0x80000000 | 25, 0x80000000 | 25, QMetaType::Double,   41,   42,   43,
 
        0        // eod
 };
@@ -157,7 +162,7 @@ void SamplePlugin::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         case 5: _t->createPtPPath((*reinterpret_cast< rw::math::Vector3D<>(*)>(_a[1]))); break;
         case 6: _t->createPtPiPath((*reinterpret_cast< rw::math::Vector3D<>(*)>(_a[1]))); break;
         case 7: _t->createPathRRTConnect((*reinterpret_cast< rw::math::Vector3D<>(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2]))); break;
-        case 8: _t->TCMP(); break;
+        case 8: _t->TCMP((*reinterpret_cast< double(*)[][2]>(_a[1]))); break;
         case 9: { double _r = _t->fRand((*reinterpret_cast< double(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])));
             if (_a[0]) *reinterpret_cast< double*>(_a[0]) = std::move(_r); }  break;
         case 10: { double _r = _t->wrapMax((*reinterpret_cast< double(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])));
@@ -166,6 +171,7 @@ void SamplePlugin::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
             if (_a[0]) *reinterpret_cast< double*>(_a[0]) = std::move(_r); }  break;
         case 12: { std::vector<rw::math::Vector3D<double> > _r = _t->linePath((*reinterpret_cast< rw::math::Vector3D<>(*)>(_a[1])),(*reinterpret_cast< rw::math::Vector3D<>(*)>(_a[2])),(*reinterpret_cast< double(*)>(_a[3])));
             if (_a[0]) *reinterpret_cast< std::vector<rw::math::Vector3D<double> >*>(_a[0]) = std::move(_r); }  break;
+        case 13: _t->blendPath(); break;
         default: ;
         }
     }
@@ -198,13 +204,13 @@ int SamplePlugin::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 13)
+        if (_id < 14)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 13;
+        _id -= 14;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 13)
+        if (_id < 14)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 13;
+        _id -= 14;
     }
     return _id;
 }

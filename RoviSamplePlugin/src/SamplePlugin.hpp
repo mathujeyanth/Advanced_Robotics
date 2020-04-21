@@ -92,11 +92,12 @@ private slots:
     void createPathRRTConnect(rw::math::Vector3D<> to, double eps);
 
     /// Task Constrained Motion Planning from lecture 4
-    void TCMP();
+    void TCMP(double constraints[][2]);
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
     std::vector<rw::math::Vector3D<double>> linePath(rw::math::Vector3D<> start, rw::math::Vector3D<> end, double stepSize);
+    void blendPath();
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
