@@ -113,12 +113,16 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _placeBottle)
     {
-        float rn_x = -0.35+(rand() % 71)/100.0f;
-        float rn_y = 0.35 +((rand() % 21)/100.0f);
-        std::cout << "x: " << rn_x << " y: " << rn_y << std::endl;
+//        float rn_x = -0.35+(rand() % 71)/100.0f;
+//        float rn_y = 0.35 +((rand() % 21)/100.0f);
+//        std::cout << "x: " << rn_x << " y: " << rn_y << std::endl;
+//        _wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->moveTo(
+//                    rw::math::Transform3D<>(rw::math::Vector3D<>(rn_x,rn_y,0.21f),
+//                                            rw::math::RPY<>(0,0,90*rw::math::Deg2Rad)
+//                                            ), _state);
         _wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->moveTo(
-                    rw::math::Transform3D<>(rw::math::Vector3D<>(rn_x,rn_y,0.21f),
-                                            rw::math::RPY<>(0,0,90*rw::math::Deg2Rad)
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(0.04, 0.835, 0.21),
+                                            rw::math::RPY<>(-1.571, 0, 1.571)
                                             ), _state);
 
         getRobWorkStudio()->setState(_state);
@@ -696,6 +700,8 @@ void SamplePlugin::TCMP(){
                 rw::math::Transform3D<>(rw::math::Vector3D<>(0.04, 0.835, 0.21),
                                         rw::math::RPY<>(-1.571, 0, 1.571)
                                         ), _state);
+    double minusOneHalfPI = -M_PI*1.5;
+    double plusHalfPI = M_PI*0.5;
     getRobWorkStudio()->setState(_state);// Position of the bottle: Q[6]{0.04, 0.835, 0.11, -1.571, 0, 1.571}
     //Random q
     rw::math::Q qVal(6,0,0,0,0,0,0);
@@ -733,13 +739,19 @@ void SamplePlugin::TCMP(){
     rw::math::Vector3D<double> newPOSerr;
     int counter = 0;
     int numOfReset = 0;
-    int collideCounter = 0;
+
+    cout << "XYZ " <<  worldTTCP.P() << " and Z " << worldTTCP.P()[2] << endl;
+
     //rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
     testTimer.resetAndResume();
     while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.05){ //
         //Add random dq
         for(int i = 0; i<6;i++){
-            qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+            if(i==1 || i==3){
+                qNew[i] = wrapMinMax(qVal[i]+fRand(minusOneHalfPI,plusHalfPI)*0.05,minusOneHalfPI,plusHalfPI);
+            }else{
+                qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+            }
         }
         //Find new TCP error
         _device2->setQ(qNew,_state);
@@ -750,15 +762,11 @@ void SamplePlugin::TCMP(){
         newPOSerr = initPos - worldTTCP.P();
 
 
-        if( ((newPOSerr.norm2() < POSerr.norm2() && RPYerr.norm2() < 0.05)) || (newPOSerr.norm2() < POSerr.norm2() && newRPYerr.norm2() < RPYerr.norm2()) && !detector->inCollision(_state,NULL,true) ){
+        if(( ((newPOSerr.norm2() < POSerr.norm2() && RPYerr.norm2() < 0.05)) || (newPOSerr.norm2() < POSerr.norm2() && newRPYerr.norm2() < RPYerr.norm2()) ) && !detector->inCollision(_state,NULL,true) && (worldTTCP.P()[2] > 0)  ){
             qVal = qNew;
             RPYerr = newRPYerr;
             POSerr = newPOSerr;
             //cout << "update and Qval " << qVal << endl;
-            getRobWorkStudio()->setState(_state);
-            collideCounter = 0;
-        }else{
-            collideCounter++;
         }
 
         counter++;
@@ -802,7 +810,6 @@ void SamplePlugin::TCMP(){
     int currTreeSize = 1; //The zero'ed position in the Tree is filled with initial configuration
     int pathIdx = 0;
 
-
     testTimer.resetAndResume();
     while(pathIdx < path.size()-1){
         tempQ = Tree[currTreeSize-1].Q1;//Directed RRT - thus not random index from the tree - But could be random from the Tree
@@ -811,8 +818,13 @@ void SamplePlugin::TCMP(){
         //oldDistToNext = (path[pathIdx+1]-worldTTCP.P()).norm2();
         //Add random dq
         for(int i = 0; i<6;i++){
-            tempQ[i] = wrapMinMax(tempQ[i]+fRand(-M_PI,M_PI)*maxJointStep,-M_PI,M_PI);
+            if(i==1 || i==3){
+                tempQ[i] = wrapMinMax(tempQ[i]+fRand(minusOneHalfPI,plusHalfPI)*maxJointStep,minusOneHalfPI,plusHalfPI);
+            }else{
+                tempQ[i] = wrapMinMax(tempQ[i]+fRand(-M_PI,M_PI)*maxJointStep,-M_PI,M_PI);
+            }
         }
+
 
         //Move robot and update distances
         _device2->setQ(tempQ,_state);
@@ -831,6 +843,7 @@ void SamplePlugin::TCMP(){
         counter++;
         if(counter % 10000000 == 0){
             cout << "Counter value " << counter/10000000 << " million - Current pathIdx: " << pathIdx <<"/"<<path.size()<< endl;
+            cout << "Current Q-value " << Tree[currTreeSize-1].Q1 <<endl;
         }else if(counter == 100000000){ //Break at 100 million
             stopFlag = true;
             break;
