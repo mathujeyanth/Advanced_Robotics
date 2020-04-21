@@ -14,16 +14,16 @@ SamplePlugin::SamplePlugin():
     connect(_timer, SIGNAL(timeout()), this, SLOT(timer()));
 
     // now connect stuff from the ui component
-    connect(_btn_im    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_btn_scan    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_btn0    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_btn1    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_doubleSpinBox  ,SIGNAL(valueChanged(double)), this, SLOT(btnPressed()) );
-    connect(_btnPtPi  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_btnPtP  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_placeBottle  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_home  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-    connect(_printTest  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+    connect(_btn_im         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_btn_scan       ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_btn0           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_btn_runPath    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_doubleSpinBox  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
+    connect(_btnPtPi        ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_btnPtP         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_placeBottle    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_home           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_printTest      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 
     _framegrabber = NULL;
 }
@@ -180,11 +180,13 @@ void SamplePlugin::btnPressed() {
 //        std::cout << "\n";
 //        printAbleDurations.clear();
 //        printAblePathSize.clear();
+        _timer->stop();
         std::cout << "printTest button" << std::endl;
         TCMP();
+        _attachIdx = -1;
         std::cout << "printTest button - OVER" << std::endl;
     }
-    else if(obj==_btn1){
+    else if(obj==_btn_runPath){
         if (!_timer->isActive()){
             _timer->start(100); // run 10 Hz
             _step = 0;
@@ -201,28 +203,12 @@ void SamplePlugin::btnPressed() {
 
 
 void SamplePlugin::timer() {
-    _wc->findDevice("WSG50")-> setQ(rw::math::Q(1, 0.055),_state);
+    //_wc->findDevice("WSG50")-> setQ(rw::math::Q(1, 0.055),_state);
     if(0 <= _step && _step < _path.size()){
-        if (_attachIdx == _step)
-        {
-            _device1 -> setQ(_attachQ,_state);
-            rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("GraspTCP"),_state);
-            getRobWorkStudio()->setState(_state);
-            _step++;
-        }else
-        {
-            std::cout << _path.at(_step)(0) << " " << _path.at(_step)(1) << " " << _path.at(_step)(2) << " " << _path.at(_step)(3) << " " << _path.at(_step)(4) << " " << _path.at(_step)(5) << ";\n";
-            _device1->setQ(_path.at(_step),_state);
-            getRobWorkStudio()->setState(_state);
-            _step++;
-        }
-
-        if (_step == _path.size())
-        {
-            _device1 -> setQ(_deattachQ,_state);
-            rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("Table"),_state);
-            getRobWorkStudio()->setState(_state);
-        }
+        //std::cout << _path.at(_step)(0) << " " << _path.at(_step)(1) << " " << _path.at(_step)(2) << " " << _path.at(_step)(3) << " " << _path.at(_step)(4) << " " << _path.at(_step)(5) << ";\n";
+        _device2->setQ(_path.at(_step),_state);
+        getRobWorkStudio()->setState(_state);
+        _step++;
     }
 }
 
@@ -701,6 +687,7 @@ double SamplePlugin::wrapMinMax(double x, double min, double max)
 struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::math::Vector3D<double> RPY;}; //Used in TCMP
 
 void SamplePlugin::TCMP(){
+    rw::common::Timer testTimer;
     /// Find initial Q pose
     rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
     cout << "detector " << !detector->inCollision(_state,NULL,true) << endl;
@@ -745,13 +732,16 @@ void SamplePlugin::TCMP(){
     rw::math::Vector3D<double> newRPYerr;
     rw::math::Vector3D<double> newPOSerr;
     int counter = 0;
+    int numOfReset = 0;
+    int collideCounter = 0;
     //rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    testTimer.resetAndResume();
     while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.05){ //
         //Add random dq
         for(int i = 0; i<6;i++){
             qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
         }
-
+        //Find new TCP error
         _device2->setQ(qNew,_state);
         worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
         TCPRPY = rw::math::RPY<double>(worldTTCP.R());
@@ -764,23 +754,118 @@ void SamplePlugin::TCMP(){
             qVal = qNew;
             RPYerr = newRPYerr;
             POSerr = newPOSerr;
-            cout << "update and Qval " << qVal << endl;
+            //cout << "update and Qval " << qVal << endl;
             getRobWorkStudio()->setState(_state);
+            collideCounter = 0;
+        }else{
+            collideCounter++;
         }
+
         counter++;
-        if(counter % 10000000 == 0){
-            cout << "Counter value " << counter << endl;
+        if(counter  == 10000){
+            cout << "Reset robot to home and try again" << endl;
+            qVal = HOME;
+            _device2->setQ(qVal,_state);
+            RPYerr = initRPY - RPYasVec;
+            POSerr = initPos - worldTTCP.P();
+            counter = 0;
+            numOfReset++;
+
         }
     }
 
-    cout<<"SUCCESS! CounterVal " << counter << "\t"<< qVal << endl;
+    cout<<"Found initial configuration! CounterVal " << counter+10000*numOfReset << "\t"<< qVal << " Number of resets " << numOfReset << " Took " << testTimer.getTimeMs() << " milliseconds " << endl;
 
     std::vector<element> Tree;
 
     Tree.push_back({1,qVal,worldTTCP.P(),RPYasVec});
-    counter = 0;
-    double maxJointStep = rw::math::Deg2Rad*10;
+    counter = 0; //Reset counter
+    double maxJointStep = 0.01; //Thus, max joint step is pi*0.05. I.e. maxJointStep value is used in generating random dq
 
-    //while()
+    int treeSize = 5000;
+    int idx;
+    rw::math::Q tempQ; //Used to check a new candidate Q that might go into the tree
+
+    bool stopFlag=false;
+    //############## Add goal position - given in XYZ and RPY
+    rw::math::Vector3D<double> goalPos = {0.047, 0.725, 0.59}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
+    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, -1.513};
+    double discretizeStep = 0.001;
+    std::vector<rw::math::Vector3D<>> path = linePath(worldTTCP.P(),goalPos,discretizeStep);
+
+    double distToCurr = (path[0]-worldTTCP.P()).norm2();
+    double oldDistToNext = (path[1]-worldTTCP.P()).norm2();
+    double newDistToNext;
+    cout << "oldDistToNext " << oldDistToNext << " distToCúrr " << distToCurr << endl;
+    //cin.get();
+
+    int currTreeSize = 1; //The zero'ed position in the Tree is filled with initial configuration
+    int pathIdx = 0;
+
+
+    testTimer.resetAndResume();
+    while(pathIdx < path.size()-1){
+        tempQ = Tree[currTreeSize-1].Q1;//Directed RRT - thus not random index from the tree - But could be random from the Tree
+        //_device2->setQ(tempQ,_state);
+        //worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+        //oldDistToNext = (path[pathIdx+1]-worldTTCP.P()).norm2();
+        //Add random dq
+        for(int i = 0; i<6;i++){
+            tempQ[i] = wrapMinMax(tempQ[i]+fRand(-M_PI,M_PI)*maxJointStep,-M_PI,M_PI);
+        }
+
+        //Move robot and update distances
+        _device2->setQ(tempQ,_state);
+        worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+        distToCurr = (path[currTreeSize]-worldTTCP.P()).norm2();
+        newDistToNext = (path[currTreeSize+1]-worldTTCP.P()).norm2();
+        //cout << "newDistToNext " << newDistToNext << " \tdistToCurr " << distToCurr << endl;
+
+        if( (distToCurr < discretizeStep*2) && !detector->inCollision(_state,NULL,true) ){
+            Tree.push_back({currTreeSize,tempQ,worldTTCP.P(),RPYasVec});
+            currTreeSize++;
+            //cout<<"update " << pathIdx <<"/"<<path.size()<< endl;
+            pathIdx++;
+
+        }
+        counter++;
+        if(counter % 10000000 == 0){
+            cout << "Counter value " << counter/10000000 << " million - Current pathIdx: " << pathIdx <<"/"<<path.size()<< endl;
+        }else if(counter == 100000000){ //Break at 100 million
+            stopFlag = true;
+            break;
+        }
+    }
+    testTimer.pause();
+
+
+
+    if(stopFlag == true){
+        cout << "Stopped after " << counter << " iterations because of STOPFLAG! - pathIdx is " << pathIdx <<"/"<<path.size()<< endl;
+    }else{
+        cout << "Found goal! In " << counter << " iterations. - Tree length is " << Tree.size() << " and it took " << testTimer.getTimeMs() <<" milliseconds to find path."<< endl;
+    }
+    _path.clear();
+    for(int i=0; i <Tree.size(); i++){
+        _path.push_back(Tree[i].Q1);
+    }
+    _device2->setQ(Tree[0].Q1,_state);//Reset robot
 
 }
+
+std::vector<rw::math::Vector3D<double>> SamplePlugin::linePath(rw::math::Vector3D<> start,rw::math::Vector3D<> end, double stepSize){
+    rw::math::Vector3D<> diff = end - start;
+    int Nsteps = diff.norm2()/stepSize;
+    std::vector<rw::math::Vector3D<>> path;
+    rw::math::Vector3D<> curr = start;
+    for(int i=0; i<Nsteps; i++){
+        curr+= diff/Nsteps;
+        path.push_back(curr);
+    }
+    if(curr != end){
+        path.push_back(end);
+    }
+    return path;
+}
+
+

@@ -37,7 +37,7 @@ public:
     QPushButton *_btnPtP;
     QPushButton *_btnPtPi;
     QPushButton *_btn0;
-    QPushButton *_btn1;
+    QPushButton *_btn_runPath;
     QPushButton *_printTest;
     QDoubleSpinBox *_doubleSpinBox;
     QSlider *_slider;
@@ -89,10 +89,10 @@ public:
 
         verticalLayout->addWidget(_btn0);
 
-        _btn1 = new QPushButton(dockWidgetContents);
-        _btn1->setObjectName(QStringLiteral("_btn1"));
+        _btn_runPath = new QPushButton(dockWidgetContents);
+        _btn_runPath->setObjectName(QStringLiteral("_btn_runPath"));
 
-        verticalLayout->addWidget(_btn1);
+        verticalLayout->addWidget(_btn_runPath);
 
         _printTest = new QPushButton(dockWidgetContents);
         _printTest->setObjectName(QStringLiteral("_printTest"));
@@ -135,7 +135,7 @@ public:
         _btnPtP->setText(QApplication::translate("SamplePlugin", "Calculate PtP path", Q_NULLPTR));
         _btnPtPi->setText(QApplication::translate("SamplePlugin", "Calculate PtP with parabolic blend path", Q_NULLPTR));
         _btn0->setText(QApplication::translate("SamplePlugin", "Calculate RRT path", Q_NULLPTR));
-        _btn1->setText(QApplication::translate("SamplePlugin", "Run Path", Q_NULLPTR));
+        _btn_runPath->setText(QApplication::translate("SamplePlugin", "Run Path", Q_NULLPTR));
         _printTest->setText(QApplication::translate("SamplePlugin", "Print test", Q_NULLPTR));
         _label->setText(QApplication::translate("SamplePlugin", "Label", Q_NULLPTR));
     } // retranslateUi
