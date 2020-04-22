@@ -81,19 +81,26 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="_initConf">
+        <property name="text">
+         <string>Initial config</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="_goalConf">
+        <property name="text">
+         <string>Goal config</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QDoubleSpinBox" name="_doubleSpinBox"/>
       </item>
       <item>
        <widget class="QSlider" name="_slider">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="_label">
-        <property name="text">
-         <string>Label</string>
         </property>
        </widget>
       </item>

@@ -24,6 +24,8 @@ SamplePlugin::SamplePlugin():
     connect(_placeBottle    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_home           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_printTest      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_initConf      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_goalConf      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 
     _framegrabber = NULL;
 }
@@ -186,7 +188,7 @@ void SamplePlugin::btnPressed() {
 //        printAblePathSize.clear();
         _timer->stop();
         std::cout << "printTest button" << std::endl;
-        double constraints[3][2] = {{0,0},{1,0.877},{0,0}};
+        double constraints[3][2] = {{0,0},{1,0.928},{0,0}};
         TCMP(constraints);
         _attachIdx = -1;
         std::cout << "printTest button - OVER" << std::endl;
@@ -201,6 +203,14 @@ void SamplePlugin::btnPressed() {
 
     } else if(obj==_doubleSpinBox){
         log().info() << "spin value:" << _doubleSpinBox->value() << "\n";
+    } else if(obj == _initConf){
+        rw::math::Q qVal(6,1.992, -2.163, -1.849, 0.896, 1.148, -0.014); // Q[6]{1.992, -2.163, -1.849, 0.896, 1.148, -0.014}
+        _device2->setQ(qVal,_state);
+        getRobWorkStudio()->setState(_state);
+    } else if(obj == _goalConf){
+        rw::math::Q qVal(6,1.115, -2.115, -1.309, -2.837, -2.044, 0); // Q[6]{1.115, -2.115, -1.309, -2.837, -2.044, 0}
+        _device2->setQ(qVal,_state);
+        getRobWorkStudio()->setState(_state);
     }
 
 
@@ -689,11 +699,21 @@ double SamplePlugin::wrapMinMax(double x, double min, double max)
     return min + wrapMax(x - min, max - min);
 }
 
-struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::math::Vector3D<double> RPY;}; //Used in TCMP
+
+struct element{//Used in TCMP
+    int index;
+    rw::math::Q Q;
+    double error;
+    rw::math::Vector3D<double> Pos;
+};
+
+bool lessThan(const element a,const element b){
+        return (b.error < a.error);
+}
 
 void SamplePlugin::TCMP(double constraints[][2]){
     //Find number of constraints
-    int numOfConstraints;
+    int numOfConstraints=0;
     for(int i=0; i<3;i++){
         if(constraints[i][0] == 1){
          numOfConstraints++;
@@ -711,6 +731,7 @@ void SamplePlugin::TCMP(double constraints[][2]){
                                         ), _state);
     double minusOneHalfPI = -M_PI*1.5;
     double plusHalfPI = M_PI*0.5;
+    double maxJointStep = 0.1; //Thus, max joint step is pi*maxJointStep. I.e. maxJointStep value is used in generating random dq
     getRobWorkStudio()->setState(_state);// Position of the bottle: Q[6]{0.04, 0.835, 0.11, -1.571, 0, 1.571}
     //Random q
     rw::math::Q qVal(6,0,0,0,0,0,0);
@@ -732,9 +753,8 @@ void SamplePlugin::TCMP(double constraints[][2]){
     rw::math::Transform3D<double> worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
 
     cout << "Postion of end " << worldTTCP.P() << " and rotation in RPY" << rw::math::RPY<double>(worldTTCP.R()) << std::endl;
-    rw::math::Vector3D<double> initPos = {0.05, 0.975, 0.247}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
+    rw::math::Vector3D<double> initPos = {0.1, 0.928, 0.247}; // FOR INV KIN: Q[6]{0.1, 0.928, 0.247, -3.142, -0.003, -1.546}
     rw::math::Vector3D<double> initRPY = {-3.142, -0.003, -1.546};
-
 
     rw::math::RPY<double> TCPRPY = rw::math::RPY<double>(worldTTCP.R());
     rw::math::Vector3D<double> RPYasVec = {TCPRPY[0],TCPRPY[1],TCPRPY[2]};
@@ -757,9 +777,9 @@ void SamplePlugin::TCMP(double constraints[][2]){
         //Add random dq
         for(int i = 0; i<6;i++){
             if(i==1 || i==3){
-                qNew[i] = wrapMinMax(qVal[i]+fRand(minusOneHalfPI,plusHalfPI)*0.05,minusOneHalfPI,plusHalfPI);
+                qNew[i] = wrapMinMax(qVal[i]+fRand(minusOneHalfPI,plusHalfPI)*maxJointStep,minusOneHalfPI,plusHalfPI);
             }else{
-                qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+                qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*maxJointStep,-M_PI,M_PI);
             }
         }
         //Find new TCP error
@@ -779,7 +799,7 @@ void SamplePlugin::TCMP(double constraints[][2]){
         }
 
         counter++;
-        if(counter  == 10000){
+        if(counter  == 20000){
             cout << "Reset robot to home and try again" << endl;
             qVal = HOME;
             _device2->setQ(qVal,_state);
@@ -791,40 +811,49 @@ void SamplePlugin::TCMP(double constraints[][2]){
         }
     }
 
-    cout<<"Found initial configuration! CounterVal " << counter+10000*numOfReset << "\t"<< qVal << " Number of resets " << numOfReset << " Took " << testTimer.getTimeMs() << " milliseconds " << endl;
+    cout<<"Found initial configuration! CounterVal " << counter+20000*numOfReset << "\t"<< qVal << " Number of resets " << numOfReset << " Took " << testTimer.getTimeMs() << " milliseconds " << endl;
 
-    std::vector<element> Tree;
 
-    Tree.push_back({1,qVal,worldTTCP.P(),RPYasVec});
-    counter = 0; //Reset counter
-    double maxJointStep = 0.01; //Thus, max joint step is pi*0.05. I.e. maxJointStep value is used in generating random dq
 
-    int treeSize = 5000;
-    int idx;
-    rw::math::Q tempQ; //Used to check a new candidate Q that might go into the tree
-
-    bool stopFlag=false;
     //############## Add goal position - given in XYZ and RPY
     rw::math::Vector3D<double> goalPos = {-0.36, 0.928, 0.262}; // FOR INV KIN: Q[6]{0.047, 0.725, 0.59, -3.139, 0.006, -1.513}
-    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, -1.513}; //Other side of boxes: Q[6]{-0.36, 0.928, 0.262, -3.123, 0.033, -1.551}
-    double discretizeStep = 0.05;
-    std::vector<rw::math::Vector3D<>> path = linePath(worldTTCP.P(),goalPos,discretizeStep);
-
-    double distToCurr = (path[0]-worldTTCP.P()).norm2();
-    double oldDistToNext = (path[1]-worldTTCP.P()).norm2();
-    double newDistToNext;
-    cout << "oldDistToNext " << oldDistToNext << " distToCúrr " << distToCurr << endl;
-    //cin.get();
-
+    rw::math::Vector3D<double> goalRPY = {-3.139, 0.006, 1.551}; //Other side of boxes: Q[6]{-0.36, 0.928, 0.262, 0.017, 0.01, 1.551}
+    //Initilize tree
+    //std::vector<element> Tree;
+    std::vector<element> sortTree;
+    std::vector<element> randomTree;
+    sortTree.push_back({0,qVal,(worldTTCP.P()-goalPos).norm2(),worldTTCP.P()});
+    randomTree.push_back({0,qVal,(worldTTCP.P()-goalPos).norm2(),worldTTCP.P()});
+    std::vector<std::array<double,3>> xyzTree;
+    xyzTree.push_back({worldTTCP.P()[0],worldTTCP.P()[1],worldTTCP.P()[2]});
+    // Parameters
+    maxJointStep = 0.1; //Thus, max joint step is pi*maxJointStep. I.e. maxJointStep value is used in generating random dq
+    counter = 0; //Reset counter
+    int idx;
+    rw::math::Q tempQ; //Used to check a new candidate Q that might go into the tree
+    bool stopFlag=false;
     int currTreeSize = 1; //The zero'ed position in the Tree is filled with initial configuration
-    int pathIdx = 0;
-
+    int constraintsSatisfied = 0;
     testTimer.resetAndResume();
-    while(pathIdx < path.size()-1){
-        tempQ = Tree[currTreeSize-1].Q1;//Directed RRT - thus not random index from the tree - But could be random from the Tree
-        //_device2->setQ(tempQ,_state);
-        //worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
-        //oldDistToNext = (path[pathIdx+1]-worldTTCP.P()).norm2();
+    double smallestErrorAndIdx[2] = {numeric_limits<double>::max(),0};
+    rw::common::Timer timer1;
+    double sumTime1=0;
+    double sumTime2=0;
+    while(true){
+        timer1.resetAndResume();
+        counter++;
+        if(fRand(0,1) < 0.2){
+            idx = (int)fRand(0,currTreeSize-1);
+        }else{
+            //idx = Tree.at(currTreeSize-1).index;
+            idx = (int)fRand(0,currTreeSize-1);
+        }
+
+        //cout <<"idx " <<  idx << endl;
+
+        //tempQ = sortTree[idx].Q;
+        tempQ = randomTree[idx].Q;
+        //cout << "tempQ " << tempQ << endl;
         //Add random dq
         for(int i = 0; i<6;i++){
             if(i==1 || i==3){
@@ -834,27 +863,58 @@ void SamplePlugin::TCMP(double constraints[][2]){
             }
         }
 
-
         //Move robot and update distances
         _device2->setQ(tempQ,_state);
         worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
-        distToCurr = (path[currTreeSize]-worldTTCP.P()).norm2();
-        newDistToNext = (path[currTreeSize+1]-worldTTCP.P()).norm2();
-        //cout << "newDistToNext " << newDistToNext << " \tdistToCurr " << distToCurr << endl;
+        sumTime1 += timer1.getTimeMs();
+        timer1.resetAndResume(); //Need to be reset to account correctly for the next if-statement and the 'check of constraints'-part
 
+        if(worldTTCP.P()[2] > 0 ){
+            //Check constraints are satisfied
+            constraintsSatisfied = 0;
+            //cout << "check constraints" << endl;
+            for(int i=0; i<3;i++){
+                if(constraints[i][0] == 1){
+                    if( abs(worldTTCP.P()[i]- constraints[i][1]) < 0.1){
+                        constraintsSatisfied++;
+                    }
+                }
+            }
+            sumTime1 += timer1.getTimeMs();
+            timer1.resetAndResume();
+            if( (constraintsSatisfied==numOfConstraints) && !detector->inCollision(_state,NULL,true) ){
+                //cout << "insert - Press enter" << endl;
+                //cin.get();
+                element node = {idx,tempQ,(worldTTCP.P()-goalPos).norm2(),worldTTCP.P()};
+                //auto it = std::lower_bound(sortTree.begin(), sortTree.end(),node,lessThan); //lessThan is a operator defined as a "function"
+                //sortTree.insert(it,{idx,tempQ,(worldTTCP.P()-goalPos).norm2()});
+                randomTree.push_back(node);
 
-        if( (distToCurr < discretizeStep*2) && !detector->inCollision(_state,NULL,true) ){
-            Tree.push_back({currTreeSize,tempQ,worldTTCP.P(),RPYasVec});
-            currTreeSize++;
-            //cout<<"update " << pathIdx <<"/"<<path.size()<< endl;
-            pathIdx++;
+                //cout << "inserted" << endl;
+                currTreeSize++;
 
+                xyzTree.push_back({worldTTCP.P()[0],worldTTCP.P()[1],worldTTCP.P()[2]});
+                if((worldTTCP.P()-goalPos).norm2() < smallestErrorAndIdx[0]){
+                    smallestErrorAndIdx[0] = (worldTTCP.P()-goalPos).norm2();
+                    smallestErrorAndIdx[1] = currTreeSize;
+                }
+            }
+            sumTime2 += timer1.getTimeMs();
         }
-        counter++;
-        if(counter % 10000000 == 0){
-            cout << "Counter value " << counter/10000000 << " million - Current pathIdx: " << pathIdx <<"/"<<path.size()<< endl;
-            cout << "Current Q-value " << Tree[currTreeSize-1].Q1 <<endl;
-        }else if(counter == 100000000){ //Break at 100 million
+
+
+        if( (worldTTCP.P()-goalPos).norm2() < 0.05 ){
+            break;
+        }
+        if(counter % 10000 == 0){
+            cout << "Counter value " << counter/1000 << " thousand - Current tree size: " << randomTree.size() << endl;
+            cout << "Time1 for the last 10.000 iterations: " << sumTime1 << "\t and Time2: " << sumTime2 << endl << endl;
+            sumTime1 = 0; sumTime2 = 0;
+            //cout << "Last error: " << randomTree[randomTree.size()-1].error << " and Qval: " << randomTree[randomTree.size()-1].Q << endl;
+            //cout << "Smallest error seen: " << smallestErrorAndIdx[0] << ", seen at index " << smallestErrorAndIdx[1] << endl;
+        }
+        if(counter == 100000){ //Break for debug
+            cout << "stop at " << counter << endl;
             stopFlag = true;
             break;
         }
@@ -864,15 +924,48 @@ void SamplePlugin::TCMP(double constraints[][2]){
 
 
     if(stopFlag == true){
-        cout << "Stopped after " << counter << " iterations because of STOPFLAG! - pathIdx is " << pathIdx <<"/"<<path.size()<< endl;
+        cout << "Stopped after " << counter << " iterations because of STOPFLAG! - Current tree size: " << randomTree.size() << endl;
+        cout << "Smallest error seen: " << smallestErrorAndIdx[0] << ", seen at index " << smallestErrorAndIdx[1] << endl;
     }else{
-        cout << "Found goal! In " << counter << " iterations. - Tree length is " << Tree.size() << " and it took " << testTimer.getTimeMs() <<" milliseconds to find path."<< endl;
+        cout << "Found goal! In " << counter << " iterations. - Tree length is " << randomTree.size() << " and it took " << testTimer.getTimeMs() <<" milliseconds to find path."<< endl;
     }
-    _path.clear();
-    for(int i=0; i <Tree.size(); i++){
-        _path.push_back(Tree[i].Q1);
+
+    //Create path by backtracking through the tree
+    int iterator = randomTree[currTreeSize-1].index;
+    std::vector<rw::math::Q> tempPath;
+    std::ofstream xyzTreePath_file("xyzTreePath.txt"); //File to write position of end-effector to (Positions which is used for final path)
+    tempPath.push_back(randomTree[currTreeSize-1].Q);
+    xyzTreePath_file << randomTree[currTreeSize-1].Pos[0] << " "<< randomTree[currTreeSize-1].Pos[1] << " "<< randomTree[currTreeSize-1].Pos[2] << '\n';
+
+    while(true){
+        tempPath.push_back(randomTree[iterator].Q);
+        for(int j=0; j<3;j++){ //Save the position of the end-effector on the path to a file
+            xyzTreePath_file << randomTree[iterator].Pos[j] << " ";
+        }
+        xyzTreePath_file << '\n';
+        if(iterator == 0 ){ //Goal condition - break
+            break;
+        }
+        iterator = randomTree[iterator].index; //Find parent index of current node
     }
-    _device2->setQ(Tree[0].Q1,_state);//Reset robot
+
+    xyzTreePath_file.close();
+    _path.clear(); //Clear path - and copy path over in reverse order of that of the tree (Because of backtracking)
+    for(int i=tempPath.size()-1; 0 <= i;i--){
+        _path.push_back(tempPath[i]);
+    }
+    cout << "Length of found path " << _path.size() << endl;
+
+    std::ofstream xyzTree_file("xyzTree.txt"); //Save the positions of all the nodes in the tree
+    for(int i = 0; i<xyzTree.size();i++) {
+        for(int j=0; j<3;j++){
+            xyzTree_file << xyzTree[i][j] << " ";
+        }
+        xyzTree_file << '\n';
+    }
+    xyzTree_file.close();
+
+    _device2->setQ(randomTree[0].Q,_state);//Reset robot to initial config
 
 }
 

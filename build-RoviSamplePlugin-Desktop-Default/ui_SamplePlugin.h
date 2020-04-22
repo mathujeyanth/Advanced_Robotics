@@ -16,7 +16,6 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QHeaderView>
-#include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QVBoxLayout>
@@ -39,9 +38,10 @@ public:
     QPushButton *_btn0;
     QPushButton *_btn_runPath;
     QPushButton *_printTest;
+    QPushButton *_initConf;
+    QPushButton *_goalConf;
     QDoubleSpinBox *_doubleSpinBox;
     QSlider *_slider;
-    QLabel *_label;
 
     void setupUi(QDockWidget *SamplePlugin)
     {
@@ -99,6 +99,16 @@ public:
 
         verticalLayout->addWidget(_printTest);
 
+        _initConf = new QPushButton(dockWidgetContents);
+        _initConf->setObjectName(QStringLiteral("_initConf"));
+
+        verticalLayout->addWidget(_initConf);
+
+        _goalConf = new QPushButton(dockWidgetContents);
+        _goalConf->setObjectName(QStringLiteral("_goalConf"));
+
+        verticalLayout->addWidget(_goalConf);
+
         _doubleSpinBox = new QDoubleSpinBox(dockWidgetContents);
         _doubleSpinBox->setObjectName(QStringLiteral("_doubleSpinBox"));
 
@@ -109,11 +119,6 @@ public:
         _slider->setOrientation(Qt::Horizontal);
 
         verticalLayout->addWidget(_slider);
-
-        _label = new QLabel(dockWidgetContents);
-        _label->setObjectName(QStringLiteral("_label"));
-
-        verticalLayout->addWidget(_label);
 
 
         verticalLayout_2->addLayout(verticalLayout);
@@ -137,7 +142,8 @@ public:
         _btn0->setText(QApplication::translate("SamplePlugin", "Calculate RRT path", Q_NULLPTR));
         _btn_runPath->setText(QApplication::translate("SamplePlugin", "Run Path", Q_NULLPTR));
         _printTest->setText(QApplication::translate("SamplePlugin", "Print test", Q_NULLPTR));
-        _label->setText(QApplication::translate("SamplePlugin", "Label", Q_NULLPTR));
+        _initConf->setText(QApplication::translate("SamplePlugin", "Initial config", Q_NULLPTR));
+        _goalConf->setText(QApplication::translate("SamplePlugin", "Goal config", Q_NULLPTR));
     } // retranslateUi
 
 };
