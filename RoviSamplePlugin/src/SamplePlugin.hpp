@@ -1,6 +1,9 @@
 #ifndef SAMPLEPLUGIN_HPP
 #define SAMPLEPLUGIN_HPP
 
+// Includes
+#include <thread>
+
 // RobWork includes
 #include <rw/models/WorkCell.hpp>
 #include <rw/kinematics/State.hpp>
@@ -96,11 +99,33 @@ private slots:
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
-    void blendPath();
+    QPath blendPath(QPath path);
+    void kuusTest();
+    void planeFunc();
+    void createTree(rw::geometry::Plane aPlane, rw::kinematics::State state, int robotNum, int size);
+    void saveTree(int robotNum);
+    QPath move(rw::math::Q From, rw::math::Q To, rw::models::SerialDevice::Ptr robot,rw::kinematics::State state);
     std::vector<rw::math::Vector3D<double>> linePath(rw::math::Vector3D<> start, rw::math::Vector3D<> end, double stepSize);
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
+
+    struct connections{
+        double cost; // Difference in configuration space
+        double distance; // Difference in 3D space
+        int index; // index of node
+    };
+
+    struct graphNode{
+        std::vector<connections> connectionVec;
+        rw::math::Q configuration;
+        rw::math::Vector3D<> postion;
+        rw::math::Vector3D<> rotation;
+    };
+
+    struct graph{
+        std::vector<graphNode> nodeVec;
+    } robot1Graph,robot2Graph;
 
     QTimer* _timer;
     QTimer* _timer25D;
@@ -113,13 +138,16 @@ private:
 
     Device::Ptr _device2;
     Device::Ptr _device1;
-    QPath _path;
+    QPath _path1;
+    QPath _path2;
     int _step;
     int _attachIdx;
     Q _attachQ;
     Q _deattachQ;
     std::vector<int> printAblePathSize;
     std::vector<double> printAbleDurations;
+
+    std::vector<std::thread> active_threads;
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/

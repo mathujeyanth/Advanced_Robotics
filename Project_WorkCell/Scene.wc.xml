@@ -50,14 +50,32 @@
 		<RPY>0 0 0</RPY> <Pos>0 0 0.1</Pos>
 	</Frame>
 	
-	<Frame name="kuusArea" refframe="Table2" type="Fixed">
-		<RPY>180 0 -90</RPY> <Pos>0 0.90 0.50</Pos>
+	<Frame name="preMatingArea1" refframe="Table1" type="Movable">
+		<RPY>0 0 90</RPY> <Pos>0 0.45 0.50</Pos>
 	</Frame>
+
+	<Frame name="preMatingArea2" refframe="Table2" type="Movable">
+		<RPY>0 0 90</RPY> <Pos>0 0.45 0.50</Pos>
+	</Frame>
+
+	<Frame name="matingArea" refframe="Table2" type="Movable">
+		<RPY>0 0 90</RPY> <Pos>0 0.60 0.50</Pos>
+	</Frame>
+
+		
 	<Frame name="Bottle" refframe="Table2"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0.35 0.55 0.21 </Pos>
+     <RPY> -90 0 90 </RPY> <Pos> 0 0.60 0.50 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>
+	</Frame>
+	
+	<Frame name="BottleGrip1" refframe="Bottle" type="Movable">
+		<RPY>0 0 180</RPY> <Pos>0 -0.025 0</Pos>
+	</Frame>
+
+	<Frame name="BottleGrip2" refframe="Bottle" type="Movable">
+		<RPY>0 0 180</RPY> <Pos>0 0.025 0</Pos>
 	</Frame>
 
 	<Frame name="BottleTop" refframe="Bottle" type="Movable">
@@ -72,32 +90,7 @@
 		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.21</Pos>
 	</Frame>
 
-	<!--Frame name="Cylinder" refframe="Table"  type="Movable" daf="true" >
-     		<RPY> -90 0 90 </RPY> <Pos> -0.25 0.474 0.150 </Pos>
-     		<Drawable name="Cylinder" refframe="Cylinder">
-         		<Polytope file="parts/cylinder" />
-     		</Drawable>
-	</Frame!-->
-
-<!-- Cameras -->
-<!--
-<Frame name="Camera_Right" refframe="WORLD" type="Movable">
-	<Pos>-0.1 1.5 0.5</Pos>
-	<RPY>0 0 -70</RPY>
-	<Property name="Camera" desc="[fovy,width,height]">50 640 480</Property>
-</Frame>
-<Frame name="Camera_Left" refframe="WORLD" type="Movable">
-	<Pos>0.1 1.5 0.5</Pos>
-	<RPY>0 0 -70</RPY>
-	<Property name="Camera" desc="[fovy,width,height]">50 640 480</Property>
-</Frame>
-
-<Frame name="Scanner25D" refframe="WORLD" type="Movable">
-	<Pos>0 1.033 1.325</Pos>
-	<RPY>0 0 -25</RPY>
-	<Property name="Scanner25D" desc="[fovy,width,height]">50 640 480</Property>
-</Frame>
--->
+	
 
 <CollisionSetup file="SceneCollisionSetup.prox.xml" /> 
 

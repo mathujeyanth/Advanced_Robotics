@@ -75,7 +75,6 @@ void SamplePlugin::open(WorkCell* workcell)
     }
 }
 
-
 void SamplePlugin::close() {
     log().info() << "CLOSE" << "\n";
 
@@ -101,6 +100,12 @@ void SamplePlugin::close() {
 
 void SamplePlugin::btnPressed() {
     QObject *obj = sender();
+
+    for(auto &th : active_threads)
+        th.join();
+
+    active_threads.clear();
+
     if (obj == _home)
     {
         _timer->stop();
@@ -123,44 +128,18 @@ void SamplePlugin::btnPressed() {
 
         getRobWorkStudio()->setState(_state);
     }
-//    else if (obj == _btnPtP)
-//    {
-//        // timing for processing time, geeksforgeeks.org/measure-execution-time-function-cpp
-//        _timer->stop();
-//        auto start = std::chrono::high_resolution_clock::now();
-//        createPtPPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
-//        auto stop = std::chrono::high_resolution_clock::now();
-//        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-//        std::cout << _path.size() << std::endl;
-//        std::cout << duration.count() / 1000 << " ms" << std::endl;
-//    }
-//    else if (obj==_btnPtPi)
-//    {
-//        _timer->stop();
-//        auto start = std::chrono::high_resolution_clock::now();
-//        createPtPiPath(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P());
-//        auto stop = std::chrono::high_resolution_clock::now();
-//        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-//        std::cout << _path.size() << std::endl;
-//        std::cout << duration.count() / 1000 << " ms" << std::endl;
-//    }
-//    else if(obj==_btn0){
-//        _timer->stop();
-//        rw::math::Math::seed();
-//        auto start = std::chrono::high_resolution_clock::now();
-//        createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
-//        auto stop = std::chrono::high_resolution_clock::now();
-//        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-//        printAblePathSize.push_back(_path.size());
-//        printAbleDurations.push_back(duration.count());
-//    }
     else if (obj == _printTest)
     {
+        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.21);
+        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
+        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
+        rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
+        createTree(aPlane,_state,1,10000);
+        cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
+        saveTree(1);
         _timer->stop();
-        std::cout << "printTest button" << std::endl;
-        TCMP();
-        _attachIdx = -1;
-        std::cout << "printTest button - OVER" << std::endl;
+        //active_threads.push_back(std::thread(&SamplePlugin::planeFunc,this));
+        _attachIdx = -1;;
     }
     else if(obj==_btn_runPath){
         if (!_timer->isActive()){
@@ -170,20 +149,26 @@ void SamplePlugin::btnPressed() {
         else
             _step = 0;
 
-    } /*else if(obj==_doubleSpinBox){
-        log().info() << "spin value:" << _doubleSpinBox->value() << "\n";
-    }*/
-
+    }
 
 }
 
 
 void SamplePlugin::timer() {
     //_wc->findDevice("WSG50")-> setQ(rw::math::Q(1, 0.055),_state);
-    if(0 <= _step && _step < _path.size()){
-        //std::cout << _path.at(_step)(0) << " " << _path.at(_step)(1) << " " << _path.at(_step)(2) << " " << _path.at(_step)(3) << " " << _path.at(_step)(4) << " " << _path.at(_step)(5) << ";\n";
-        _device1->setQ(_path.at(_step),_state);
-        _device2->setQ(_path.at(_step),_state);
+    int length = 0;
+
+    if (_path1.size() > _path2.size())
+        length = _path1.size();
+    else
+        length = _path2.size();
+
+    if(0 <= _step && _step < length){
+        if (_step <_path1.size())
+            _device1->setQ(_path1.at(_step),_state);
+        if (_step <_path2.size())
+            _device2->setQ(_path2.at(_step),_state);
+
         getRobWorkStudio()->setState(_state);
         _step++;
     }
@@ -319,7 +304,7 @@ void SamplePlugin::createPtPPath(rw::math::Vector3D<> to)
     QPath tempQPath;
     for (double s = 0.0;s<traj.duration();s += 0.05)
         tempQPath.push_back(traj.x(s));
-    _path = tempQPath;
+    //_path = tempQPath;
 }
 
 void SamplePlugin::createPtPiPath(rw::math::Vector3D<> to)
@@ -442,7 +427,7 @@ void SamplePlugin::createPtPiPath(rw::math::Vector3D<> to)
     QPath tempQPath;
     for (double s = 0.0;s<traj.duration();s += 0.05)
         tempQPath.push_back(traj.x(s));
-    _path = tempQPath;
+    //_path = tempQPath;
 }
 
 // Source: "ReachabilityAnalysis_solution.zip" provided by Jeppe Langaa on BlackBoard
@@ -639,7 +624,7 @@ void SamplePlugin::createPathRRTConnect(rw::math::Vector3D<> to, double eps){
     }
     for (double s = 0.0;s<traj2.duration();s += 0.05)
         tempQPath.push_back(traj2.x(s));
-    _path = tempQPath;
+    //_path = tempQPath;
 
 }
 
@@ -830,31 +815,31 @@ void SamplePlugin::TCMP(){
     }else{
         cout << "Found goal! In " << counter << " iterations. - Tree length is " << Tree.size() << " and it took " << testTimer.getTimeMs() <<" milliseconds to find path."<< endl;
     }
-    _path.clear();
+    //_path.clear();
     for(int i=0; i <Tree.size(); i++){
-        _path.push_back(Tree[i].Q1);
+        //_path.push_back(Tree[i].Q1);
     }
     _device2->setQ(Tree[0].Q1,_state);//Reset robot
-    blendPath();
+    //blendPath();
 
 }
 
-void SamplePlugin::blendPath(){
-    rw::math::Q nextQ = _path[2];
-    rw::math::Q currentQ = _path[1];
-    rw::math::Q formerQ = _path[0];
+QPath SamplePlugin::blendPath(QPath path){
+    rw::math::Q nextQ = path[2];
+    rw::math::Q currentQ = path[1];
+    rw::math::Q formerQ = path[0];
     rw::math::Q tempQ = formerQ-currentQ;
     double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
     deltaD = sqrt(deltaD);
     rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
     rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
-            = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(_path[0],_path[1],deltaD));
+            = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(path[0],path[1],deltaD));
     traj.add(currentLinearIntPol);
-    for (int i = 1;i<_path.size()-2;i += 1)
+    for (int i = 1;i<path.size()-2;i += 1)
     {
-        nextQ = _path[i+2];
-        currentQ = _path[i+1];
-        formerQ = _path[i];
+        nextQ = path[i+2];
+        currentQ = path[i+1];
+        formerQ = path[i];
         tempQ = formerQ-currentQ;
         deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
         deltaD = sqrt(deltaD);
@@ -877,7 +862,7 @@ void SamplePlugin::blendPath(){
     QPath tempQPath;
     for (double s = 0.0;s<traj.duration();s += 0.05)
         tempQPath.push_back(traj.x(s));
-    _path = tempQPath;
+    return tempQPath;
 }
 
 std::vector<rw::math::Vector3D<double>> SamplePlugin::linePath(rw::math::Vector3D<> start,rw::math::Vector3D<> end, double stepSize){
@@ -895,4 +880,289 @@ std::vector<rw::math::Vector3D<double>> SamplePlugin::linePath(rw::math::Vector3
     return path;
 }
 
+void SamplePlugin::kuusTest(){
+    rw::models::SerialDevice::Ptr robot1 = _wc->findDevice<rw::models::SerialDevice>("1_UR-6-85-5-A");
+    rw::models::SerialDevice::Ptr robot2 = _wc->findDevice<rw::models::SerialDevice>("2_UR-6-85-5-A");
+    rw::kinematics::MovableFrame::Ptr Bottle = _wc->findFrame<rw::kinematics::MovableFrame>("Bottle");
+    rw::kinematics::MovableFrame::Ptr preMatingArea1 = _wc->findFrame<rw::kinematics::MovableFrame>("preMatingArea1");
+    rw::kinematics::MovableFrame::Ptr BottleGrip1 = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip1");
+    rw::kinematics::MovableFrame::Ptr BottleGrip2 = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip2");
+    rw::models::Device::Ptr gripperDevice1 = _wc->findDevice("1_WSG50");
+    rw::models::Device::Ptr gripperDevice2 = _wc->findDevice("2_WSG50");
+    rw::common::Timer myTimer;
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    const rw::math::Q gQ(1, 0.055);
+    gripperDevice1 -> setQ(gQ,_state);
+    gripperDevice2 -> setQ(gQ,_state);
+    rw::kinematics::State state = _state;
+    rw::math::Q sol1;
+    rw::math::Q sol2;
+    rw::math::Q starting;
+    rw::math::Q startingConfig = robot1 ->getQ(state);
+    std::vector<rw::math::Q> solutions = getConfigurations("preMatingArea1", "GraspTCP1", robot1, _wc, state);
+    double bestSolution = 9999.9;
+    myTimer.resetAndResume();
+    int counterSolutions = 0;
+    for(double yawAngle=0; yawAngle<360.0; yawAngle+=10.0){
+        for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+            preMatingArea1->moveTo(
+                        rw::math::Transform3D<>(rw::math::Vector3D<>(Bottle->getTransform(state).P()),
+                                                rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,yawAngle*rw::math::Deg2Rad)
+                                                ), state);
+            std::vector<rw::math::Q> solutions = getConfigurations("preMatingArea1", "GraspTCP1", robot1, _wc, state);
+            counterSolutions += solutions.size();
+            for(unsigned int i=0; i<solutions.size(); i++){
+                // set the robot in that configuration and check if it is in collision
+                robot1->setQ(solutions[i], state);
+                if( !detector->inCollision(state,NULL,true) )
+                {
+                    rw::math::Q tempQ = solutions[i]-startingConfig;
+                    double curSolution = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+                    if (curSolution<bestSolution)
+                    {
+                        bestSolution = curSolution;
+                        starting = solutions[i];
+                    }
+                }
+            }
+        }
+    }
+    _device1->setQ(starting,state);
+    _device2->setQ(starting,state);
+    bestSolution = 9999.9;
+    for(double yawAngle=90; yawAngle<360.0; yawAngle+=180.0){
+        for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+            Bottle->moveTo(
+                        rw::math::Transform3D<>(rw::math::Vector3D<>(Bottle->getTransform(state).P()),
+                                                rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,yawAngle*rw::math::Deg2Rad)
+                                                ), state);
+            std::vector<rw::math::Q> solutions = getConfigurations("BottleGrip1", "GraspTCP1", robot1, _wc, state);
+            counterSolutions += solutions.size();
+            for(unsigned int i=0; i<solutions.size(); i++){
+                // set the robot in that configuration and check if it is in collision
+                robot1->setQ(solutions[i], state);
+                if( !detector->inCollision(state,NULL,true) )
+                {
+                    rw::math::Q tempQ = solutions[i]-starting;
+                    double curSolution = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+                    if (curSolution<bestSolution)
+                    {
+                        bestSolution = curSolution;
+                        sol1 = solutions[i];
+                    }
+                }
+            }
+        }
+    }
+    bestSolution = 9999.9;
+    for(double yawAngle=90; yawAngle<360.0; yawAngle+=180.0){
+        for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+            Bottle->moveTo(
+                        rw::math::Transform3D<>(rw::math::Vector3D<>(Bottle->getTransform(state).P()),
+                                                rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,yawAngle*rw::math::Deg2Rad)
+                                                ), state);
+            std::vector<rw::math::Q> solutions = getConfigurations("BottleGrip2", "GraspTCP2", robot2, _wc, state);
+            counterSolutions += solutions.size();
+            for(unsigned int i=0; i<solutions.size(); i++){
+                // set the robot in that configuration and check if it is in collision
+                robot2->setQ(solutions[i], state);
+                if( !detector->inCollision(state,NULL,true) )
+                {
+                    rw::math::Q tempQ = solutions[i]-starting;
+                    double curSolution = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+                    if (curSolution<bestSolution)
+                    {
+                        bestSolution = curSolution;
+                        sol2 = solutions[i];
+                    }
+                }
+            }
+        }
+    }
+    cout << "Spent " << myTimer.getTimeMs()/1000.0 << "s with " << counterSolutions << " solutions tested." << endl;
+    _path1 = move(starting,sol1,robot1,_state);
+    _path2 = move(starting,sol2,robot2,_state);
+}
 
+void SamplePlugin::planeFunc(){
+    rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.21);
+    rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
+    rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
+    rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
+    cout << aPlane.distance(rw::math::Vector3D<>(0,0.45,0.5)) << endl;
+}
+
+void SamplePlugin::createTree(rw::geometry::Plane aPlane,rw::kinematics::State state, int robotNum, int size)
+{
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    graph* ptrGraph;
+    rw::models::SerialDevice::Ptr robot;
+    rw::kinematics::MovableFrame::Ptr BottleGrip;
+    rw::models::Device::Ptr gripperDevice;
+    rw::kinematics::Frame* robotTCP;
+    rw::kinematics::Frame* table;
+    rw::common::Timer myTimer;
+
+    if (robotNum == 1)
+    {
+        robotTCP = _wc->findFrame("1_UR-6-85-5-A.TCP");
+        table = _wc->findFrame("Table1");
+        robot = _wc->findDevice<rw::models::SerialDevice>("1_UR-6-85-5-A");
+        BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip1");
+        gripperDevice = _wc->findDevice("1_WSG50");
+        ptrGraph = &robot1Graph;
+    }
+    else
+    {
+        table = _wc->findFrame("Table2");
+        robotTCP = _wc->findFrame("2_UR-6-85-5-A.TCP");
+        robot = _wc->findDevice<rw::models::SerialDevice>("2_UR-6-85-5-A");
+        BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip2");
+        gripperDevice = _wc->findDevice("2_WSG50");
+        ptrGraph = &robot1Graph;
+    }
+
+    rw::math::Transform3D<double> worldTTCP;
+    rw::math::Q qNew = robot->getQ(state);
+
+    float jointConstraints[6][2] = {{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{3.142,-3.142}};
+
+    float maxErr = 0.01;
+    int maxIterations = 100;
+    float maxJointStep = 0.25;
+    myTimer.resetAndResume();
+    for (int i = 0;i<size;i++)
+    {
+        if (i%100 == 0)
+            cout << i << endl;
+        //Add random dq
+        for(int i = 0; i<6;i++){
+            qNew[i] = fRand(jointConstraints[i][1],jointConstraints[i][0]);
+        }
+        //Find new TCP error
+        robot->setQ(qNew,state);
+        worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
+        float distance = aPlane.distance(worldTTCP.P());
+        float newDistance = 0;
+        int iterationCounter = 0;
+        rw::math::Q qUpdate = qNew;
+        while(distance > maxErr && maxIterations > iterationCounter)
+        {
+            iterationCounter++;
+            //Random gradient decent
+            for(int i = 0; i<6;i++){
+                qUpdate[i] = wrapMinMax(qNew[i]+fRand(-3.142,3.142)*maxJointStep,jointConstraints[i][1],jointConstraints[i][0]);
+            }
+            robot->setQ(qNew,state);
+            worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
+            newDistance = aPlane.distance(worldTTCP.P());
+
+            if (newDistance < distance)
+            {
+                distance = newDistance;
+                qNew = qUpdate;
+            }
+        }
+        if (distance > maxErr || detector->inCollision(state,NULL,true))
+        {
+            i--;
+            continue;
+        }
+        graphNode newNode;
+        newNode.configuration = qNew;
+        newNode.postion = worldTTCP.P();
+        ptrGraph -> nodeVec.push_back(newNode);
+
+    }
+    cout << "Spent " << myTimer.getTimeMs()/1000.0 << "s" << endl;
+}
+
+//bool RGD_New_Config(rw::geometry::Plane aPlane,rw::math::Q* q)
+//{
+//    //Find new TCP error
+//    robot->setQ(qNew,state);
+//    worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
+//    float distance = aPlane.distance(worldTTCP.P());
+//    float newDistance = 0;
+//    int iterationCounter = 0;
+//    rw::math::Q qUpdate = qNew;
+//    while(distance > maxErr && maxIterations > iterationCounter)
+//    {
+//        iterationCounter++;
+//        //Random gradient decent
+//        for(int i = 0; i<6;i++){
+//            qUpdate[i] = wrapMinMax(qNew[i]+fRand(-3.142,3.142)*maxJointStep,jointConstraints[i][1],jointConstraints[i][0]);
+//        }
+//        robot->setQ(qNew,state);
+//        worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
+//        newDistance = aPlane.distance(worldTTCP.P());
+
+//        if (newDistance < distance)
+//        {
+//            distance = newDistance;
+//            qNew = qUpdate;
+//        }
+//    }
+//}
+
+void SamplePlugin::saveTree(int robotNum)
+{
+    graph* ptrGraph;
+    if(robotNum == 1)
+        ptrGraph = &robot1Graph;
+    else
+        ptrGraph = &robot2Graph;
+    std::ofstream xyzTree_file("xyzTree.txt"); //Save the positions of all the nodes in the tree
+        for(int i = 0; i<ptrGraph->nodeVec.size();i++) {
+            for(int j=0; j<3;j++){
+                xyzTree_file << ptrGraph->nodeVec[i].postion[j] << " ";
+            }
+            xyzTree_file << '\n';
+        }
+        xyzTree_file.close();
+}
+
+QPath SamplePlugin::move(rw::math::Q From, rw::math::Q To, SerialDevice::Ptr robot, State state){
+    const CollisionStrategy::Ptr cdstrategy =
+            rwlibs::proximitystrategies::ProximityStrategyFactory::makeCollisionStrategy("PQP");
+    if (cdstrategy.isNull())
+        RW_THROW("PQP Collision Strategy could not be found.");
+    const CollisionDetector::Ptr collisionDetector =
+            ownedPtr(new CollisionDetector(_wc, cdstrategy));
+    const rw::pathplanning::PlannerConstraint con =
+            rw::pathplanning::PlannerConstraint::make(collisionDetector, robot, state);
+    double eps = 0.01;
+    const rw::pathplanning::QSampler::Ptr Qsampler = rw::pathplanning::QSampler::makeConstrained(rw::pathplanning::QSampler::makeUniform(robot),con.getQConstraintPtr());
+    const rw::math::QMetric::Ptr metric = rw::math::MetricFactory::makeEuclidean<rw::math::Q>();
+    const rw::pathplanning::QToQPlanner::Ptr planner = rwlibs::pathplanners::RRTPlanner::makeQToQPlanner(con, Qsampler, metric, eps, rwlibs::pathplanners::RRTPlanner::RRTConnect);
+
+    rw::trajectory::QPath result;
+    planner->query(From, To, result);
+
+    rw::math::Q currentQ = result[1];
+    rw::math::Q formerQ = result[0];
+    rw::math::Q tempQ = formerQ-currentQ;
+    double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+    deltaD = sqrt(deltaD);
+    rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
+    rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
+            = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+
+    for (int i = 0;i<result.size()-1;i += 1)
+    {
+        currentQ = result[i+1];
+        formerQ = result[i];
+        tempQ = formerQ-currentQ;
+        deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        currentLinearIntPol = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+        traj.add(currentLinearIntPol);
+
+    }
+
+    rw::trajectory::QPath tempQPath;
+    for (double s = 0.0;s<traj.duration();s += 0.05)
+        tempQPath.push_back(traj.x(s));
+
+    return tempQPath;
+}
