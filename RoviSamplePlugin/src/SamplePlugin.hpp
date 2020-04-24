@@ -90,10 +90,15 @@ public:
         double cost; // Difference in configuration space
         double distance; // Difference in 3D space
         int index; // index of node
+
+        bool lessThan(const connections a,const connections b){
+                return (b.distance < a.distance);
+        }
     };
 
     struct graphNode{
         std::vector<connections> connectionVec;
+        int index;
         rw::math::Q configuration;
         rw::math::Vector3D<> postion;
         rw::math::Vector3D<> rotation;
@@ -134,6 +139,8 @@ private slots:
     void planeFunc();
     void createTree(rw::geometry::Plane aPlane, rw::kinematics::State state, int robotNum, int size);
     bool RGD_New_Config(rw::geometry::Plane aPlane,rw::math::Q* q, robotPtr rPtr,rw::kinematics::State* state, float dMax);
+    void connectGraph(rw::kinematics::State state, int robotNum);
+    bool canConnect(rw::math::Q q1, rw::math::Q q2,  robotPtr rPtr, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
     void setupRobotPtrs();
     void saveTree(int robotNum);
     QPath move(rw::math::Q From, rw::math::Q To, rw::models::SerialDevice::Ptr robot,rw::kinematics::State state);
@@ -144,7 +151,7 @@ private:
 
     QTimer* _timer;
     QTimer* _timer25D;
-    float jointConstraints[6][2] = {{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{3.142,-3.142}};
+    float jointConstraints[6][2] = {{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-3.142,3.142}};
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;

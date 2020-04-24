@@ -131,23 +131,24 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
-        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.21);
-        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
-        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
+        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
+        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
+        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.45);
         rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
-        //createTree(aPlane,_state,1,10000);
-        //cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
+        createTree(aPlane,_state,1,1000);
+        cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
+        connectGraph(_state,1);
         //saveTree(1);
         _timer->stop();
-        active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,1,10000));
-        active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,2,10000));
+        //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,1,10000));
+        //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,2,10000));
 
         _attachIdx = -1;;
     }
     else if(obj==_btn_runPath){
-        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.21);
-        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
-        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
+        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
+        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
+        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.60);
         rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
 
         int randomValue = rand() % 10000;
@@ -167,7 +168,6 @@ void SamplePlugin::btnPressed() {
     }
 
 }
-
 
 void SamplePlugin::timer() {
     //_wc->findDevice("WSG50")-> setQ(rw::math::Q(1, 0.055),_state);
@@ -1022,21 +1022,20 @@ void SamplePlugin::createTree(rw::geometry::Plane aPlane,rw::kinematics::State s
     myTimer.resetAndResume();
     while(rPtr.ptrGraph -> nodeVec.size() < size)
     {
-        if (rPtr.ptrGraph -> nodeVec.size()%1000 == 0)
-            cout << rPtr.ptrGraph -> nodeVec.size() << endl;
         //Add random dq
         for(int i = 0; i<6;i++){
-            qNew[i] = fRand(jointConstraints[i][1],jointConstraints[i][0]);
+            qNew[i] = fRand(jointConstraints[i][0],jointConstraints[i][1]);
         }
         //Find new TCP error
-        if (RGD_New_Config(aPlane,&qNew,rPtr,&state,0.01))
+        if (RGD_New_Config(aPlane,&qNew,rPtr,&state,0.1))
         {
             //rPtr.robot->setQ(qNew,state);
             if (!detector->inCollision(state,NULL,true))
             {
                 graphNode newNode;
                 newNode.configuration = qNew;
-                newNode.postion = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,state).P();
+                newNode.postion = rw::kinematics::Kinematics::worldTframe(rPtr.robotTCP,state).P();
+                newNode.index = rPtr.ptrGraph -> nodeVec.size();
                 rPtr.ptrGraph -> nodeVec.push_back(newNode);
             }
 
@@ -1056,7 +1055,7 @@ bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, ro
     float maxErr = 0.01;
     float newDistance = 0;
 
-    int maxI = 100;
+    int maxI = 1000;
     int maxJ = 10;
     int i = 0;
     int j = 0;
@@ -1069,7 +1068,7 @@ bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, ro
         //Random gradient decent
         qUpdate = *q;
         for(int i = 0; i<6;i++){
-            qUpdate[i] = wrapMinMax(qUpdate[i]+fRand(-3.142,3.142)*dMax,jointConstraints[i][1],jointConstraints[i][0]);
+            qUpdate[i] = wrapMinMax(qUpdate[i]+fRand(jointConstraints[i][0],jointConstraints[i][1])*dMax,jointConstraints[i][0],jointConstraints[i][1]);
         }
         rPtr.robot->setQ(qUpdate,*state);
         worldTTCP = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,*state);
@@ -1085,6 +1084,80 @@ bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, ro
         }
     }
     return false;
+}
+
+
+
+void SamplePlugin::connectGraph(rw::kinematics::State state, int robotNum)
+{
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    robotPtr rPtr;
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+
+    float dMax = 0.10;
+    int maxConnections = 4;
+
+    for(int i = 0;i<rPtr.ptrGraph->nodeVec.size();i++)
+    {
+        if (i%10)
+            cout << i << endl;
+        std::vector<connections> possibleConnections;
+
+        for(int j = 0;i<rPtr.ptrGraph->nodeVec.size();j++)
+        {
+            if(j == i)
+                continue;
+
+            float distance = (rPtr.ptrGraph->nodeVec[i].postion-rPtr.ptrGraph->nodeVec[j].postion).norm2();
+
+            if(distance < dMax)
+            {
+                connections newC;
+                newC.distance = distance;
+                rw::math::Q tempQ = rPtr.ptrGraph->nodeVec[i].configuration - rPtr.ptrGraph->nodeVec[j].configuration;
+                newC.cost = sqrt(tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5));
+                newC.index = j;
+                auto it = std::lower_bound(possibleConnections.begin(), possibleConnections.end(),newC,lessThan);
+                possibleConnections.insert(it,newC);
+            }
+        }
+        int counter = 0;
+        int j = 0;
+        while (counter < maxConnections && j < possibleConnections.size())
+        {
+            int split = possibleConnections[j].cost+1;
+            if(canConnect(rPtr.ptrGraph->nodeVec[i].configuration,rPtr.ptrGraph->nodeVec[possibleConnections[j].index].configuration,rPtr,detector,state, split))
+            {
+                counter++;
+                rPtr.ptrGraph->nodeVec[i].connectionVec.push_back(possibleConnections[j]);
+            }
+            j++;
+        }
+    }
+}
+
+bool SamplePlugin::canConnect(rw::math::Q q1, rw::math::Q q2, robotPtr rPtr, rw::proximity::CollisionDetector::Ptr detector, State state, int splits)
+{
+    rw::math::Q q3 = q1 + ((q2-q1)/2);
+    rPtr.robot->setQ(q3,state);
+
+    if (detector->inCollision(state,NULL,true))
+        return false;
+
+    if (splits == 0)
+        return true;
+    else
+    {
+        bool left = canConnect(q3,q2,rPtr,detector,state,splits-1);
+        bool right = canConnect(q1,q3,rPtr,detector,state,splits-1);
+        if (left && right)
+            return true;
+        else
+            return false;
+    }
 }
 
 void SamplePlugin::saveTree(int robotNum)
@@ -1148,7 +1221,6 @@ QPath SamplePlugin::move(rw::math::Q From, rw::math::Q To, SerialDevice::Ptr rob
 
     return tempQPath;
 }
-
 
 void SamplePlugin::setupRobotPtrs()
 {
