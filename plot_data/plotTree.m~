@@ -1,0 +1,21 @@
+clc;
+close all;
+clear;
+addpath('../../..')
+%% Load data
+
+Tree1 = importdata('1xyzTree.txt');
+Tree2 = importdata('2xyzTree.txt');
+
+figure(1)
+hold on
+plot3(Tree1(:,1),Tree1(:,2),Tree1(:,3),'*r')
+plot3(Tree2(:,1),Tree2(:,2),Tree2(:,3),'*g')
+
+%plot(Path(:,1),Path(:,3),'*g')
+%plot(-0.36,0.262,'*r')
+xlabel('x axis')
+ylabel('y axis')
+zlabel('z axis')
+%legend({'Tree nodes','Path nodes','Goal node'})
+hold off

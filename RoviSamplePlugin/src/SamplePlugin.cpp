@@ -869,7 +869,7 @@ void SamplePlugin::TCMP(double constraints[][2]){
         sumTime1 += timer1.getTimeMs();
         timer1.resetAndResume(); //Need to be reset to account correctly for the next if-statement and the 'check of constraints'-part
 
-        if(worldTTCP.P()[2] > 0 ){
+        if(worldTTCP.P()[2] > 0 ){//Only check tempQ if it is above the table-plane (I.e. z>0)
             //Check constraints are satisfied
             constraintsSatisfied = 0;
             //cout << "check constraints" << endl;

@@ -4,18 +4,15 @@ clear;
 addpath('../../..')
 %% Load data
 
-Tree = importdata('xyzTree.txt');
-Path = importdata('xyzTreePath.txt');
+Tree1 = importdata('1xyzTree.txt');
+Tree2 = importdata('2xyzTree.txt');
 
-%figure(1)
-%plot(A)
-
-figure(2)
-hold on
-plot(Tree(:,1),Tree(:,3),'*')
-plot(Path(:,1),Path(:,3),'*g')
-plot(-0.36,0.262,'*r')
+plot3(Tree1(:,1),Tree1(:,2),Tree1(:,3),'*r',Tree2(:,1),Tree2(:,2),Tree2(:,3),'*g')
 xlabel('x axis')
-ylabel('z axis')
-legend({'Tree nodes','Path nodes','Goal node'})
-hold off
+ylabel('y axis')
+zlabel('z axis')
+legend({'Tree1 nodes','Tree2 nodes'})
+xlim([-5 5])
+ylim([-5 5])
+zlim([-5 5])
+
