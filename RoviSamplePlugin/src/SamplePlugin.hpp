@@ -83,6 +83,38 @@ public:
 
     virtual void initialize();
 
+    struct connections{
+        double cost; // Difference in configuration space
+        double distance; // Difference in 3D space
+        int index; // index of node
+
+    };
+    static bool lessThan(const connections a,const connections b){
+            return (b.distance < a.distance);
+    }
+
+    struct graphNode{
+        std::vector<connections> connectionVec;
+        int index;
+        rw::math::Q configuration;
+        rw::math::Vector3D<> postion;
+        rw::math::Vector3D<> rotation;
+    };
+
+    struct graph{
+        std::vector<graphNode> nodeVec;
+    } robot1Graph,robot2Graph;
+
+    struct robotPtr
+    {
+        graph* ptrGraph;
+        rw::models::SerialDevice::Ptr robot;
+        rw::kinematics::MovableFrame::Ptr BottleGrip;
+        rw::models::Device::Ptr gripperDevice;
+        rw::kinematics::Frame* robotTCP;
+        rw::kinematics::Frame* table;
+    } robotPtr1, robotPtr2;
+
 private slots:
     void btnPressed();
     void timer();
@@ -99,14 +131,24 @@ private slots:
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
-
+    QPath blendPath(QPath path);
+    void kuusTest();
+    void planeFunc();
+    void createTree(rw::geometry::Plane aPlane, rw::kinematics::State state, int robotNum, int size);
+    bool RGD_New_Config(rw::geometry::Plane aPlane,rw::math::Q* q, robotPtr rPtr,rw::kinematics::State* state, float dMax);
+    void connectGraph(rw::kinematics::State state, int robotNum);
+    bool canConnect(rw::math::Q q1, rw::math::Q q2,  robotPtr rPtr, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
+    void setupRobotPtrs();
+    void saveTree(int robotNum);
+    QPath move(rw::math::Q From, rw::math::Q To, rw::models::SerialDevice::Ptr robot,rw::kinematics::State state);
+    std::vector<rw::math::Vector3D<double>> linePath(rw::math::Vector3D<> start, rw::math::Vector3D<> end, double stepSize);
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 
     QTimer* _timer;
     QTimer* _timer25D;
-    
+    float jointConstraints[6][2] = {{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-3.142,3.142}};
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
@@ -115,13 +157,15 @@ private:
 
     Device::Ptr _device2;
     Device::Ptr _device1;
-    QPath _path;
+    QPath _path1;
+    QPath _path2;
     int _step;
     int _attachIdx;
     Q _attachQ;
     Q _deattachQ;
     std::vector<int> printAblePathSize;
     std::vector<double> printAbleDurations;
+
     std::vector<std::thread> active_threads;
 
 };
