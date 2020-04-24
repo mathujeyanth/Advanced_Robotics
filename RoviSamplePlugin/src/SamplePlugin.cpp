@@ -73,6 +73,7 @@ void SamplePlugin::open(WorkCell* workcell)
         _step = -1;
 
     }
+    setupRobotPtrs();
 }
 
 void SamplePlugin::close() {
@@ -134,20 +135,34 @@ void SamplePlugin::btnPressed() {
         rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
         rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
         rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
-        createTree(aPlane,_state,1,10000);
-        cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
-        saveTree(1);
+        //createTree(aPlane,_state,1,10000);
+        //cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
+        //saveTree(1);
         _timer->stop();
-        //active_threads.push_back(std::thread(&SamplePlugin::planeFunc,this));
+        active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,1,10000));
+        active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,2,10000));
+
         _attachIdx = -1;;
     }
     else if(obj==_btn_runPath){
-        if (!_timer->isActive()){
-            _timer->start(100); // run 10 Hz
-            _step = 0;
-        }
-        else
-            _step = 0;
+        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.21);
+        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.21);
+        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.50);
+        rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
+
+        int randomValue = rand() % 10000;
+        _device1->setQ(robotPtr1.ptrGraph->nodeVec[randomValue].configuration,_state);
+        _device2->setQ(robotPtr2.ptrGraph->nodeVec[randomValue].configuration,_state);
+        getRobWorkStudio()->setState(_state);
+
+        cout << aPlane.distance(rw::kinematics::Kinematics::frameTframe(robotPtr1.table,robotPtr1.robotTCP,_state).P()) << endl;
+        cout << aPlane.distance(rw::kinematics::Kinematics::frameTframe(robotPtr2.table,robotPtr2.robotTCP,_state).P()) << endl;
+        //if (!_timer->isActive()){
+        //    _timer->start(100); // run 10 Hz
+        //    _step = 0;
+        //}
+        //else
+        //    _step = 0;
 
     }
 
@@ -995,115 +1010,82 @@ void SamplePlugin::planeFunc(){
 void SamplePlugin::createTree(rw::geometry::Plane aPlane,rw::kinematics::State state, int robotNum, int size)
 {
     rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
-    graph* ptrGraph;
-    rw::models::SerialDevice::Ptr robot;
-    rw::kinematics::MovableFrame::Ptr BottleGrip;
-    rw::models::Device::Ptr gripperDevice;
-    rw::kinematics::Frame* robotTCP;
-    rw::kinematics::Frame* table;
     rw::common::Timer myTimer;
-
+    robotPtr rPtr;
     if (robotNum == 1)
-    {
-        robotTCP = _wc->findFrame("1_UR-6-85-5-A.TCP");
-        table = _wc->findFrame("Table1");
-        robot = _wc->findDevice<rw::models::SerialDevice>("1_UR-6-85-5-A");
-        BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip1");
-        gripperDevice = _wc->findDevice("1_WSG50");
-        ptrGraph = &robot1Graph;
-    }
+        rPtr = robotPtr1;
     else
-    {
-        table = _wc->findFrame("Table2");
-        robotTCP = _wc->findFrame("2_UR-6-85-5-A.TCP");
-        robot = _wc->findDevice<rw::models::SerialDevice>("2_UR-6-85-5-A");
-        BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip2");
-        gripperDevice = _wc->findDevice("2_WSG50");
-        ptrGraph = &robot1Graph;
-    }
+        rPtr = robotPtr2;
 
-    rw::math::Transform3D<double> worldTTCP;
-    rw::math::Q qNew = robot->getQ(state);
-
-    float jointConstraints[6][2] = {{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{1.570,-4.712},{3.142,-3.142},{3.142,-3.142}};
-
-    float maxErr = 0.01;
-    int maxIterations = 100;
-    float maxJointStep = 0.25;
+    rw::math::Q qNew = rPtr.robot->getQ(state);
+    rPtr.ptrGraph -> nodeVec.clear();
     myTimer.resetAndResume();
-    for (int i = 0;i<size;i++)
+    while(rPtr.ptrGraph -> nodeVec.size() < size)
     {
-        if (i%100 == 0)
-            cout << i << endl;
+        if (rPtr.ptrGraph -> nodeVec.size()%1000 == 0)
+            cout << rPtr.ptrGraph -> nodeVec.size() << endl;
         //Add random dq
         for(int i = 0; i<6;i++){
             qNew[i] = fRand(jointConstraints[i][1],jointConstraints[i][0]);
         }
         //Find new TCP error
-        robot->setQ(qNew,state);
-        worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
-        float distance = aPlane.distance(worldTTCP.P());
-        float newDistance = 0;
-        int iterationCounter = 0;
-        rw::math::Q qUpdate = qNew;
-        while(distance > maxErr && maxIterations > iterationCounter)
+        if (RGD_New_Config(aPlane,&qNew,rPtr,&state,0.01))
         {
-            iterationCounter++;
-            //Random gradient decent
-            for(int i = 0; i<6;i++){
-                qUpdate[i] = wrapMinMax(qNew[i]+fRand(-3.142,3.142)*maxJointStep,jointConstraints[i][1],jointConstraints[i][0]);
-            }
-            robot->setQ(qNew,state);
-            worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
-            newDistance = aPlane.distance(worldTTCP.P());
-
-            if (newDistance < distance)
+            //rPtr.robot->setQ(qNew,state);
+            if (!detector->inCollision(state,NULL,true))
             {
-                distance = newDistance;
-                qNew = qUpdate;
+                graphNode newNode;
+                newNode.configuration = qNew;
+                newNode.postion = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,state).P();
+                rPtr.ptrGraph -> nodeVec.push_back(newNode);
             }
-        }
-        if (distance > maxErr || detector->inCollision(state,NULL,true))
-        {
-            i--;
-            continue;
-        }
-        graphNode newNode;
-        newNode.configuration = qNew;
-        newNode.postion = worldTTCP.P();
-        ptrGraph -> nodeVec.push_back(newNode);
 
+        }
     }
     cout << "Spent " << myTimer.getTimeMs()/1000.0 << "s" << endl;
+    saveTree(robotNum);
 }
 
-//bool RGD_New_Config(rw::geometry::Plane aPlane,rw::math::Q* q)
-//{
-//    //Find new TCP error
-//    robot->setQ(qNew,state);
-//    worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
-//    float distance = aPlane.distance(worldTTCP.P());
-//    float newDistance = 0;
-//    int iterationCounter = 0;
-//    rw::math::Q qUpdate = qNew;
-//    while(distance > maxErr && maxIterations > iterationCounter)
-//    {
-//        iterationCounter++;
-//        //Random gradient decent
-//        for(int i = 0; i<6;i++){
-//            qUpdate[i] = wrapMinMax(qNew[i]+fRand(-3.142,3.142)*maxJointStep,jointConstraints[i][1],jointConstraints[i][0]);
-//        }
-//        robot->setQ(qNew,state);
-//        worldTTCP = rw::kinematics::Kinematics::frameTframe(table,robotTCP,state);
-//        newDistance = aPlane.distance(worldTTCP.P());
+bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, robotPtr rPtr, rw::kinematics::State* state, float dMax)
+{
+    rw::math::Transform3D<double> worldTTCP;
+    rPtr.robot->setQ(*q,*state);
+    worldTTCP = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,*state);
 
-//        if (newDistance < distance)
-//        {
-//            distance = newDistance;
-//            qNew = qUpdate;
-//        }
-//    }
-//}
+    float distance = 99999;
+    float maxErr = 0.01;
+    float newDistance = 0;
+
+    int maxI = 100;
+    int maxJ = 10;
+    int i = 0;
+    int j = 0;
+
+    rw::math::Q qUpdate = *q;
+    while(maxI > i && maxJ > j)
+    {
+        i++;
+        j++;
+        //Random gradient decent
+        qUpdate = *q;
+        for(int i = 0; i<6;i++){
+            qUpdate[i] = wrapMinMax(qUpdate[i]+fRand(-3.142,3.142)*dMax,jointConstraints[i][1],jointConstraints[i][0]);
+        }
+        rPtr.robot->setQ(qUpdate,*state);
+        worldTTCP = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,*state);
+        newDistance = abs(aPlane.distance(worldTTCP.P()));
+        if (newDistance < distance)
+        {
+            j = 0;
+            distance = newDistance;
+            *q = qUpdate;
+
+            if (distance < maxErr)
+                return true;
+        }
+    }
+    return false;
+}
 
 void SamplePlugin::saveTree(int robotNum)
 {
@@ -1112,7 +1094,7 @@ void SamplePlugin::saveTree(int robotNum)
         ptrGraph = &robot1Graph;
     else
         ptrGraph = &robot2Graph;
-    std::ofstream xyzTree_file("xyzTree.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream xyzTree_file(std::to_string((robotNum))+"xyzTree.txt"); //Save the positions of all the nodes in the tree
         for(int i = 0; i<ptrGraph->nodeVec.size();i++) {
             for(int j=0; j<3;j++){
                 xyzTree_file << ptrGraph->nodeVec[i].postion[j] << " ";
@@ -1165,4 +1147,22 @@ QPath SamplePlugin::move(rw::math::Q From, rw::math::Q To, SerialDevice::Ptr rob
         tempQPath.push_back(traj.x(s));
 
     return tempQPath;
+}
+
+
+void SamplePlugin::setupRobotPtrs()
+{
+    robotPtr1.robotTCP = _wc->findFrame("1_UR-6-85-5-A.TCP");
+    robotPtr1.table = _wc->findFrame("Table1");
+    robotPtr1.robot = _wc->findDevice<rw::models::SerialDevice>("1_UR-6-85-5-A");
+    robotPtr1.BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip1");
+    robotPtr1.gripperDevice = _wc->findDevice("1_WSG50");
+    robotPtr1.ptrGraph = &robot1Graph;
+
+    robotPtr2.table = _wc->findFrame("Table2");
+    robotPtr2.robotTCP = _wc->findFrame("2_UR-6-85-5-A.TCP");
+    robotPtr2.robot = _wc->findDevice<rw::models::SerialDevice>("2_UR-6-85-5-A");
+    robotPtr2.BottleGrip = _wc->findFrame<rw::kinematics::MovableFrame>("BottleGrip2");
+    robotPtr2.gripperDevice = _wc->findDevice("2_WSG50");
+    robotPtr2.ptrGraph = &robot2Graph;
 }
