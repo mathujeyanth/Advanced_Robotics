@@ -1,4 +1,4 @@
-#include "SamplePlugin.hpp"
+﻿#include "SamplePlugin.hpp"
 
 
 
@@ -131,14 +131,14 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
+        cout << "Test button pressed" << endl;
         rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
         rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
         rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.45);
         rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
-        createTree(aPlane,_state,1,1000);
-        cout << "Size of tree: "<< robot1Graph.nodeVec.size() << endl;
-        connectGraph(_state,1);
-        //saveTree(1);
+        createTree(aPlane,_state,1,10000);
+        lazyConnectGraph(1);
+        lazyFindPath(p1,p3,_state,1);
         _timer->stop();
         //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,1,10000));
         //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,2,10000));
@@ -146,24 +146,12 @@ void SamplePlugin::btnPressed() {
         _attachIdx = -1;;
     }
     else if(obj==_btn_runPath){
-        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
-        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
-        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.60);
-        rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
-
-        int randomValue = rand() % 10000;
-        _device1->setQ(robotPtr1.ptrGraph->nodeVec[randomValue].configuration,_state);
-        _device2->setQ(robotPtr2.ptrGraph->nodeVec[randomValue].configuration,_state);
-        getRobWorkStudio()->setState(_state);
-
-        cout << aPlane.distance(rw::kinematics::Kinematics::frameTframe(robotPtr1.table,robotPtr1.robotTCP,_state).P()) << endl;
-        cout << aPlane.distance(rw::kinematics::Kinematics::frameTframe(robotPtr2.table,robotPtr2.robotTCP,_state).P()) << endl;
-        //if (!_timer->isActive()){
-        //    _timer->start(100); // run 10 Hz
-        //    _step = 0;
-        //}
-        //else
-        //    _step = 0;
+        if (!_timer->isActive()){
+            _timer->start(100); // run 10 Hz
+            _step = 0;
+        }
+        else
+            _step = 0;
 
     }
 
@@ -1034,15 +1022,15 @@ void SamplePlugin::createTree(rw::geometry::Plane aPlane,rw::kinematics::State s
             {
                 graphNode newNode;
                 newNode.configuration = qNew;
-                newNode.postion = rw::kinematics::Kinematics::worldTframe(rPtr.robotTCP,state).P();
+                newNode.postion = rw::kinematics::Kinematics::frameTframe(rPtr.table,rPtr.robotTCP,state).P();
+                //newNode.postion = rw::kinematics::Kinematics::worldTframe(rPtr.robotTCP,state).P();
                 newNode.index = rPtr.ptrGraph -> nodeVec.size();
                 rPtr.ptrGraph -> nodeVec.push_back(newNode);
             }
 
         }
     }
-    cout << "Spent " << myTimer.getTimeMs()/1000.0 << "s" << endl;
-    saveTree(robotNum);
+    cout << "Time spent creating graph: " << myTimer.getTimeMs()/1000.0 << "s" << endl;
 }
 
 bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, robotPtr rPtr, rw::kinematics::State* state, float dMax)
@@ -1086,62 +1074,161 @@ bool SamplePlugin::RGD_New_Config(rw::geometry::Plane aPlane, rw::math::Q* q, ro
     return false;
 }
 
-
-
 void SamplePlugin::connectGraph(rw::kinematics::State state, int robotNum)
 {
     rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    rw::common::Timer myTimer;
     robotPtr rPtr;
     if (robotNum == 1)
         rPtr = robotPtr1;
     else
         rPtr = robotPtr2;
 
-    float dMax = 0.10;
-    int maxConnections = 4;
-
+    float dMax = 0.20;
+    float cMax = 2;
+    int maxConnections = 5;
+    myTimer.resetAndResume();
     for(int i = 0;i<rPtr.ptrGraph->nodeVec.size();i++)
     {
-        if (i%10)
-            cout << i << endl;
+        if (i%100 == 0 && i != 0)
+            cout << "Connection index = " << i << endl;
         std::vector<connections> possibleConnections;
 
-        for(int j = 0;i<rPtr.ptrGraph->nodeVec.size();j++)
+        for(int j = 0;j<rPtr.ptrGraph->nodeVec.size();j++)
         {
             if(j == i)
                 continue;
-
-            float distance = (rPtr.ptrGraph->nodeVec[i].postion-rPtr.ptrGraph->nodeVec[j].postion).norm2();
-
-            if(distance < dMax)
+            rw::math::Vector3D<> direction = rPtr.ptrGraph->nodeVec[j].postion-rPtr.ptrGraph->nodeVec[i].postion;
+            rw::math::Q tempQ = rPtr.ptrGraph->nodeVec[i].configuration - rPtr.ptrGraph->nodeVec[j].configuration;
+            float cDist = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
+            float distance = direction.norm2();
+            if(cDist < cMax) // distance < dMax &&
             {
                 connections newC;
                 newC.distance = distance;
-                rw::math::Q tempQ = rPtr.ptrGraph->nodeVec[i].configuration - rPtr.ptrGraph->nodeVec[j].configuration;
-                newC.cost = sqrt(tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5));
+                newC.cost = cDist;
                 newC.index = j;
                 auto it = std::lower_bound(possibleConnections.begin(), possibleConnections.end(),newC,lessThan);
                 possibleConnections.insert(it,newC);
             }
         }
         int counter = 0;
-        int j = 0;
-        while (counter < maxConnections && j < possibleConnections.size())
+        int jIterator = 0;
+        bool connectExists = false;
+        while (counter < maxConnections && jIterator < possibleConnections.size())
         {
-            int split = possibleConnections[j].cost+1;
-            if(canConnect(rPtr.ptrGraph->nodeVec[i].configuration,rPtr.ptrGraph->nodeVec[possibleConnections[j].index].configuration,rPtr,detector,state, split))
+            connectExists = false;
+            for (int E = 0;E<rPtr.ptrGraph->nodeVec[i].connectionVec.size();E++)
+            {
+                if (rPtr.ptrGraph->nodeVec[i].connectionVec[E].index == possibleConnections[jIterator].index)
+                {
+                    connectExists = true;
+                    break;
+                }
+            }
+
+            if (connectExists)
             {
                 counter++;
-                rPtr.ptrGraph->nodeVec[i].connectionVec.push_back(possibleConnections[j]);
+                jIterator++;
+                continue;
             }
-            j++;
+
+            int split = (possibleConnections[jIterator].cost/2) + 2;
+
+            if(canConnect(rPtr.ptrGraph->nodeVec[i].configuration,rPtr.ptrGraph->nodeVec[possibleConnections[jIterator].index].configuration,rPtr,detector,state, split))
+            {
+                counter++;
+                rPtr.ptrGraph->nodeVec[i].connectionVec.push_back(possibleConnections[jIterator]);
+                connections newC;
+                newC.distance = possibleConnections[jIterator].distance;
+                newC.cost = possibleConnections[jIterator].cost;
+                newC.index = i;
+                rPtr.ptrGraph->nodeVec[possibleConnections[jIterator].index].connectionVec.push_back(newC);
+            }
+            jIterator++;
         }
     }
+    cout << "Time spent connecting graph: "<<myTimer.getTimeMs()/1000.0 << "s" << endl;
+
+}
+
+void SamplePlugin::lazyConnectGraph(int robotNum)
+{
+    rw::common::Timer myTimer;
+    robotPtr rPtr;
+
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+
+    float cMax = 2.5;
+
+    myTimer.resetAndResume();
+    for(int i = 0;i<rPtr.ptrGraph->nodeVec.size();i++)
+    {
+        if (i%1000 == 0 && i != 0)
+            cout << "Connection index = " << i << endl;
+        std::vector<connections> possibleConnections;
+
+        for(int j = 0;j<rPtr.ptrGraph->nodeVec.size();j++)
+        {
+            if(j == i)
+                continue;
+            rw::math::Vector3D<> direction = rPtr.ptrGraph->nodeVec[j].postion-rPtr.ptrGraph->nodeVec[i].postion;
+            rw::math::Q tempQ = rPtr.ptrGraph->nodeVec[i].configuration - rPtr.ptrGraph->nodeVec[j].configuration;
+            float cDist = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
+            float distance = direction.norm2();
+            if(cDist < cMax) // distance < dMax &&
+            {
+                connections newC;
+                newC.distance = distance;
+                newC.cost = cDist;
+                newC.index = j;
+                auto it = std::lower_bound(possibleConnections.begin(), possibleConnections.end(),newC,lessThan);
+                possibleConnections.insert(it,newC);
+            }
+        }
+        int counter = 0;
+        int jIterator = 0;
+        bool connectExists = false;
+        while (jIterator < possibleConnections.size())
+        {
+            connectExists = false;
+            for (int E = 0;E<rPtr.ptrGraph->nodeVec[i].connectionVec.size();E++)
+            {
+                if (rPtr.ptrGraph->nodeVec[i].connectionVec[E].index == possibleConnections[jIterator].index)
+                {
+                    connectExists = true;
+                    break;
+                }
+            }
+
+            if (connectExists)
+            {
+                counter++;
+                jIterator++;
+                continue;
+            }
+
+            rPtr.ptrGraph->nodeVec[i].connectionVec.push_back(possibleConnections[jIterator]);
+            connections newC;
+            newC.distance = possibleConnections[jIterator].distance;
+            newC.cost = possibleConnections[jIterator].cost;
+            newC.index = i;
+            rPtr.ptrGraph->nodeVec[possibleConnections[jIterator].index].connectionVec.push_back(newC);
+
+            jIterator++;
+        }
+    }
+    cout << "Time spent connecting graph: "<<myTimer.getTimeMs()/1000.0 << "s" << endl;
 }
 
 bool SamplePlugin::canConnect(rw::math::Q q1, rw::math::Q q2, robotPtr rPtr, rw::proximity::CollisionDetector::Ptr detector, State state, int splits)
 {
     rw::math::Q q3 = q1 + ((q2-q1)/2);
+
     rPtr.robot->setQ(q3,state);
 
     if (detector->inCollision(state,NULL,true))
@@ -1160,6 +1247,397 @@ bool SamplePlugin::canConnect(rw::math::Q q1, rw::math::Q q2, robotPtr rPtr, rw:
     }
 }
 
+void SamplePlugin::findPath(rw::math::Vector3D<> start, rw::math::Vector3D<> goal, int robotNum)
+{
+    robotPtr rPtr;
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+
+    const int n = rPtr.ptrGraph->nodeVec.size();
+
+    int closest_start_node_index,closest_goal_node_index;
+
+    double min_start_dist=10000,min_goal_dist=10000, cur_err;
+
+    //find the closest start and goal Qs in graph
+    for(int i =0;i<rPtr.ptrGraph->nodeVec.size();i++)
+    {
+        cur_err=(rPtr.ptrGraph->nodeVec[i].postion-goal).norm2();
+        if (cur_err<min_start_dist && rPtr.ptrGraph->nodeVec[i].connectionVec.size() > 0)
+        {
+            min_start_dist =cur_err;
+            closest_start_node_index = i;
+        }
+        cur_err=(rPtr.ptrGraph->nodeVec[i].postion-start).norm2();
+        if (cur_err<min_goal_dist && rPtr.ptrGraph->nodeVec[i].connectionVec.size() > 0)
+        {
+            min_goal_dist =cur_err;
+            closest_goal_node_index = i;
+        }
+    }
+    cout << "Goal index " << closest_goal_node_index << " start index " <<closest_start_node_index << endl;
+
+    cout<<"\nQUERYING\n";
+    // Find path with modified A*
+    float* distance;
+    float* pred;
+    distance = new float[n];
+    pred = new float[n];
+
+    bool* visited;
+    visited = new bool[n];
+    int nextnode,i,j;
+    float mindistance;
+
+    for(i=0;i<n;i++) {
+       distance[i]=costFunc(closest_start_node_index, i,robotNum);
+       pred[i]=closest_start_node_index;
+       visited[i]=false;
+    }
+
+    distance[closest_start_node_index]=0;
+    visited[closest_start_node_index]=true;
+    int count=1;
+    while(count<n-1)
+    {
+        mindistance=50000;
+        for(i=0;i<n;i++)
+          if(distance[i]<mindistance&&!visited[i])
+            {
+              mindistance=distance[i];
+              nextnode=i;
+            }
+        visited[nextnode]=true;
+        for(i=0;i<n;i++)
+          if(!visited[i])
+               if(mindistance+costFunc(nextnode,i,robotNum)<distance[i])
+                {
+                  distance[i]=mindistance+costFunc(nextnode,i,robotNum);
+                  pred[i]=nextnode;
+               }
+        count++;
+    }
+
+    vector<rw::math::Q> Q_path;
+
+   std::cout<<"Distance of node "<<closest_goal_node_index<<"="<<distance[i] << endl;
+   std::cout<<"Path = "<<closest_goal_node_index << endl;
+
+   Q_path.push_back(rPtr.ptrGraph->nodeVec[closest_goal_node_index].configuration);
+   j=closest_goal_node_index;
+    saveGraphIdx.push_back(j);
+    do {
+        j=pred[j];
+        Q_path.push_back(rPtr.ptrGraph->nodeVec[j].configuration);
+        cout<<" <- "<<j << " Q: " << rPtr.ptrGraph->nodeVec[j].configuration << " Pos: "<< rPtr.ptrGraph->nodeVec[j].postion <<endl;
+        saveGraphIdx.push_back(j);
+    }while(j!=closest_start_node_index);
+
+    cout << "PtP" << endl;
+    // Point to Point interpolation
+    if (Q_path.size() > 2)
+    {
+        Q tempQ = Q_path[0] - Q_path[1];
+        double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
+        rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
+                = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(Q_path[0],Q_path[1],deltaD));
+        traj.add(currentLinearIntPol);
+        for (int i = 1;i<Q_path.size()-1;i += 1)
+        {
+            rw::math::Q currentQ = Q_path[i+1];
+            rw::math::Q formerQ = Q_path[i];
+            tempQ = formerQ-currentQ;
+            deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+            deltaD = sqrt(deltaD);
+            currentLinearIntPol = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+            traj.add(currentLinearIntPol);
+        }
+
+        QPath tempQPath;
+        for (double s = 0.0;s<traj.duration();s += 0.05)
+            tempQPath.push_back(traj.x(s));
+
+         _path1 = tempQPath;
+    }
+
+}
+
+void SamplePlugin::lazyFindPath(rw::math::Vector3D<> start, rw::math::Vector3D<> goal, State state, int robotNum)
+{
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    rw::common::Timer myTimer;
+    robotPtr rPtr;
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+    const int n = rPtr.ptrGraph->nodeVec.size();
+    int closest_start_node_index,closest_goal_node_index;
+    double min_start_dist=10000,min_goal_dist=10000, cur_err;
+
+    float* distance;
+    float* pred;
+    distance = new float[n];
+    pred = new float[n];
+
+    bool* visited;
+    visited = new bool[n];
+    int nextnode,i,j;
+    float mindistance;
+
+    bool collisionFound = false;
+    vector<rw::math::Q> Q_path;
+    vector<int> Q_idx;
+    myTimer.resetAndResume();
+    while(true)
+    {
+        for(int k =0;k<rPtr.ptrGraph->nodeVec.size();k++)
+        {
+            cur_err=(rPtr.ptrGraph->nodeVec[k].postion-goal).norm2();
+            if (cur_err<min_start_dist && rPtr.ptrGraph->nodeVec[k].connectionVec.size() > 0)
+            {
+                min_start_dist =cur_err;
+                closest_start_node_index = k;
+            }
+            cur_err=(rPtr.ptrGraph->nodeVec[k].postion-start).norm2();
+            if (cur_err<min_goal_dist && rPtr.ptrGraph->nodeVec[k].connectionVec.size() > 0)
+            {
+                min_goal_dist =cur_err;
+                closest_goal_node_index = k;
+            }
+        }
+        cout << "Goal index " << closest_goal_node_index << " start index " <<closest_start_node_index << endl;
+        cout<<"\nQUERYING\n";
+        // Find path with modified A*
+
+        int timeBefore = myTimer.getTimeMs();
+//        for(i=0;i<n;i++) {
+//           distance[i]=costFunc(closest_start_node_index, i,robotNum);
+//           pred[i]=closest_start_node_index;
+//           visited[i]=false;
+//        }
+//        cout << "First loop: "<< (myTimer.getTimeMs()-timeBefore)/1000.0 <<"s" << endl;
+//        if (firstRun)
+//        {
+//            for(i=0;i<n;i++) {
+//               distance[i]=costFunc(closest_start_node_index, i,robotNum);
+//               pred[i]=closest_start_node_index;
+//               visited[i]=false;
+//            }
+//            firstRun = false;
+//        }
+//        else
+//        {
+//            // cost to 500 for the connection that is removed.
+//            distance[Q_idx[i]] = 500;
+//            distance[Q_idx[i+1]] = 500;
+//            for(i=0;i<n;i++) {
+//               pred[i]=closest_start_node_index;
+//               visited[i]=false;
+//            }
+//        }
+
+//        distance[closest_start_node_index]=0;
+//        visited[closest_start_node_index]=true;
+//        int count=1;
+//        timeBefore = myTimer.getTimeMs();
+//        while(count<n-1)
+//        {
+//            mindistance=50000;
+//            for(i=0;i<n;i++)
+//              if(distance[i]<mindistance&&!visited[i])
+//                {
+//                  mindistance=distance[i];
+//                  nextnode=i;
+//                }
+//            visited[nextnode]=true;
+//            for(i=0;i<n;i++)
+//              if(!visited[i])
+//              {
+//                  float someValue = costFunc(nextnode,i,robotNum);
+//                   if(mindistance+someValue<distance[i])
+//                    {
+//                      distance[i]=mindistance+someValue;
+//                      pred[i]=nextnode;
+//                   }
+//              }
+//            count++;
+//        }
+//        cout << "Second loop: "<< (myTimer.getTimeMs()-timeBefore)/1000.0 <<"s" << endl;
+        timeBefore = myTimer.getTimeMs();
+        vector<int> aPath = Astar(closest_start_node_index,closest_goal_node_index,robotNum);
+        cout << "Astar: "<< (myTimer.getTimeMs()-timeBefore)/1000.0 <<"s" << endl;
+        std::cout<<"Distance of node "<<closest_goal_node_index<<"="<<distance[i] << endl;
+        std::cout<<"Path = "<<closest_goal_node_index << endl;
+        Q_path.clear();
+        Q_idx.clear();
+        //Q_path.push_back(rPtr.ptrGraph->nodeVec[closest_goal_node_index].configuration);
+        //Q_idx.push_back(closest_goal_node_index);
+        cout << "A path size: " << aPath.size() << endl;
+        for(i = 0;i<aPath.size();i++)
+        {
+            Q_path.push_back(rPtr.ptrGraph->nodeVec[aPath[i]].configuration);
+            Q_idx.push_back(aPath[i]);
+        }
+//        j=closest_goal_node_index;
+//         saveGraphIdx.push_back(j);
+//         do {
+//             j=pred[j];
+//             Q_path.push_back(rPtr.ptrGraph->nodeVec[j].configuration);
+//             Q_idx.push_back(j);
+//             cout<<" <- "<<j << " Q: " << rPtr.ptrGraph->nodeVec[j].configuration << " Pos: "<< rPtr.ptrGraph->nodeVec[j].postion <<endl;
+//             saveGraphIdx.push_back(j);
+//         }while(j!=closest_start_node_index);
+        timeBefore = myTimer.getTimeMs();
+
+        for (i = 0;i<Q_path.size()-1;i++)
+         {
+             int split = 2;
+             int indexJ1,indexJ2;
+             for(j = 0;j<rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec.size();j++)
+             {
+                 if (rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec[j].index == Q_idx[i+1])
+                     indexJ1 = j;
+             }
+             for(j = 0;j<rPtr.ptrGraph->nodeVec[Q_idx[i+1]].connectionVec.size();j++)
+             {
+                 if (rPtr.ptrGraph->nodeVec[Q_idx[i+1]].connectionVec[j].index == Q_idx[i])
+                     indexJ2 = j;
+             }
+             if (!rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec[indexJ1].collisionChecked && !canConnect(Q_path[i],Q_path[i+1],rPtr,detector,state,split))
+             {
+                 cout << "Collision in lazy path finding between "<< Q_idx[i] << " and " << Q_idx[i+1] << endl;
+
+                 rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec.erase(rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec.begin()+indexJ1);
+                 rPtr.ptrGraph->nodeVec[Q_idx[i+1]].connectionVec.erase(rPtr.ptrGraph->nodeVec[Q_idx[i+1]].connectionVec.begin()+indexJ2);
+
+                 collisionFound = true;
+             }
+             else
+             {
+                 rPtr.ptrGraph->nodeVec[Q_idx[i]].connectionVec[indexJ1].collisionChecked = true;
+                 rPtr.ptrGraph->nodeVec[Q_idx[i+1]].connectionVec[indexJ2].collisionChecked = true;
+             }
+
+         }
+        cout << "Third loop: "<< (myTimer.getTimeMs()-timeBefore)/1000.0 <<"s" << endl;
+
+         if (!collisionFound)
+             break;
+         else
+             collisionFound = false;
+
+    }
+
+
+    cout << "Time spent find a path: " << myTimer.getTimeMs()/1000.0 << "s" << endl;
+    //find the closest start and goal Qs in graph
+
+
+    cout << "PtP" << endl;
+    // Point to Point interpolation
+    if (Q_path.size() > 2)
+    {
+        Q tempQ = Q_path[0] - Q_path[1];
+        double deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+        deltaD = sqrt(deltaD);
+        rw::trajectory::InterpolatorTrajectory<rw::math::Q> traj;
+        rw::trajectory::LinearInterpolator<rw::math::Q>::Ptr currentLinearIntPol
+                = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(Q_path[0],Q_path[1],deltaD));
+        traj.add(currentLinearIntPol);
+        for (int i = 1;i<Q_path.size()-1;i += 1)
+        {
+            rw::math::Q currentQ = Q_path[i+1];
+            rw::math::Q formerQ = Q_path[i];
+            tempQ = formerQ-currentQ;
+            deltaD = tempQ(0)*tempQ(0)+tempQ(1)*tempQ(1)+tempQ(2)*tempQ(2)+tempQ(3)*tempQ(3)+tempQ(4)*tempQ(4)+tempQ(5)*tempQ(5);
+            deltaD = sqrt(deltaD);
+            currentLinearIntPol = ownedPtr(new rw::trajectory::LinearInterpolator<rw::math::Q>(formerQ,currentQ,deltaD));
+            traj.add(currentLinearIntPol);
+        }
+
+        QPath tempQPath;
+        for (double s = 0.0;s<traj.duration();s += 0.05)
+            tempQPath.push_back(traj.x(s));
+
+        if (robotNum == 1)
+            _path1 = tempQPath;
+        else
+            _path2 = tempQPath;
+    }
+
+}
+
+vector<int> SamplePlugin::Astar(int startIdx, int goalIdx, int robotNum)
+{
+    robotPtr rPtr;
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+
+    priority_queue<graphNode *,vector<graphNode *>,compareNodes> openList;
+
+    set<int> closedList;
+    rPtr.ptrGraph->nodeVec[startIdx].heuristic = (rPtr.ptrGraph->nodeVec[startIdx].postion-rPtr.ptrGraph->nodeVec[goalIdx].postion).norm2();
+    rPtr.ptrGraph->nodeVec[startIdx].cost = rPtr.ptrGraph->nodeVec[startIdx].heuristic;
+    rPtr.ptrGraph->nodeVec[startIdx].distance = 0;
+    openList.push(&rPtr.ptrGraph->nodeVec[startIdx]);
+
+    while(!openList.empty())
+    {
+        graphNode * curPtr = openList.top();
+
+        openList.pop();
+
+        closedList.insert(curPtr->index);
+
+        if (curPtr->index == goalIdx)
+            break;
+
+        for (int i = 0;i<curPtr->connectionVec.size();i++)
+        {
+            if (closedList.find(curPtr->connectionVec[i].index) == closedList.end())
+            {
+                rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].heuristic =  (rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].postion-rPtr.ptrGraph->nodeVec[goalIdx].postion).norm2();
+                rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].distance = curPtr->distance+(rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].postion-rPtr.ptrGraph->nodeVec[curPtr->index].postion).norm2();
+                rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].parentIdx = curPtr->index;
+                rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].cost = rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].heuristic + rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index].distance;
+                openList.push(&rPtr.ptrGraph->nodeVec[curPtr->connectionVec[i].index]);
+            }
+
+        }
+    }
+    vector<int> path;
+    graphNode * curPtr = &rPtr.ptrGraph->nodeVec[goalIdx];
+    while(curPtr->index != startIdx)
+    {
+        path.push_back(curPtr->index);
+        curPtr = &rPtr.ptrGraph->nodeVec[curPtr->parentIdx];
+    }
+    return path;
+}
+
+float SamplePlugin::costFunc(int iIdx, int jIdx, int robotNum)
+{
+    robotPtr rPtr;
+    if (robotNum == 1)
+        rPtr = robotPtr1;
+    else
+        rPtr = robotPtr2;
+
+    for (int i = 0;i<rPtr.ptrGraph->nodeVec[iIdx].connectionVec.size();i++)
+    {
+        if (rPtr.ptrGraph->nodeVec[iIdx].connectionVec[i].index == jIdx)
+            return rPtr.ptrGraph->nodeVec[iIdx].connectionVec[i].distance; // .cost
+    }
+    return 500;
+}
+
 void SamplePlugin::saveTree(int robotNum)
 {
     graph* ptrGraph;
@@ -1167,14 +1645,23 @@ void SamplePlugin::saveTree(int robotNum)
         ptrGraph = &robot1Graph;
     else
         ptrGraph = &robot2Graph;
+
     std::ofstream xyzTree_file(std::to_string((robotNum))+"xyzTree.txt"); //Save the positions of all the nodes in the tree
-        for(int i = 0; i<ptrGraph->nodeVec.size();i++) {
-            for(int j=0; j<3;j++){
-                xyzTree_file << ptrGraph->nodeVec[i].postion[j] << " ";
-            }
-            xyzTree_file << '\n';
+    std::ofstream pathTree_file(std::to_string((robotNum))+"pathTree.txt"); //Save the positions of all the nodes in the tree
+    for(int i = 0; i<ptrGraph->nodeVec.size();i++) {
+        for(int j=0; j<3;j++){
+            xyzTree_file << ptrGraph->nodeVec[i].postion[j] << " ";
         }
-        xyzTree_file.close();
+        xyzTree_file << '\n';
+    }
+    xyzTree_file.close();
+    for(int i = 0;i<saveGraphIdx.size();i++)
+    {
+        for(int j=0; j<3;j++)
+            pathTree_file << ptrGraph->nodeVec[saveGraphIdx[i]].postion[j] << " ";
+        pathTree_file << "\n";
+    }
+    pathTree_file.close();
 }
 
 QPath SamplePlugin::move(rw::math::Q From, rw::math::Q To, SerialDevice::Ptr robot, State state){

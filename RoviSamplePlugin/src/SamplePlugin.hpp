@@ -3,6 +3,10 @@
 
 // Includes
 #include <thread>
+#include <iomanip>
+#include <queue>
+#include <set>
+
 
 // RobWork includes
 #include <rw/models/WorkCell.hpp>
@@ -90,19 +94,32 @@ public:
         double cost; // Difference in configuration space
         double distance; // Difference in 3D space
         int index; // index of node
-
-        bool lessThan(const connections a,const connections b){
-                return (b.distance < a.distance);
-        }
+        bool collisionChecked = false;
     };
+
+    static bool lessThan(const connections a,const connections b){
+            return (b.cost > a.cost);
+    }
 
     struct graphNode{
         std::vector<connections> connectionVec;
         int index;
+        int parentIdx;
+        float distance;
+        float heuristic;
+        float cost;
         rw::math::Q configuration;
         rw::math::Vector3D<> postion;
         rw::math::Vector3D<> rotation;
     };
+
+    struct compareNodes
+    {
+        bool operator()(const graphNode *a,const graphNode *b){
+                    return ((b->cost) < (a->cost));
+        }
+    };
+
 
     struct graph{
         std::vector<graphNode> nodeVec;
@@ -139,8 +156,18 @@ private slots:
     void planeFunc();
     void createTree(rw::geometry::Plane aPlane, rw::kinematics::State state, int robotNum, int size);
     bool RGD_New_Config(rw::geometry::Plane aPlane,rw::math::Q* q, robotPtr rPtr,rw::kinematics::State* state, float dMax);
+
+    void lazyConnectGraph(int robotNum);
     void connectGraph(rw::kinematics::State state, int robotNum);
+
     bool canConnect(rw::math::Q q1, rw::math::Q q2,  robotPtr rPtr, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
+
+    void findPath(rw::math::Vector3D<> start,rw::math::Vector3D<> goal, int robotNum);
+    void lazyFindPath(rw::math::Vector3D<> start,rw::math::Vector3D<> goal, rw::kinematics::State state, int robotNum);
+
+    vector<int> Astar(int startIdx, int goalIdx, int robotNum);
+
+    float costFunc(int iIdx, int jIdx,int robotNum);
     void setupRobotPtrs();
     void saveTree(int robotNum);
     QPath move(rw::math::Q From, rw::math::Q To, rw::models::SerialDevice::Ptr robot,rw::kinematics::State state);
@@ -152,6 +179,7 @@ private:
     QTimer* _timer;
     QTimer* _timer25D;
     float jointConstraints[6][2] = {{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-3.142,3.142}};
+    float jointWeights[6] = {2.0,3.0,3.0,0.5,0.5,0.5};
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
@@ -168,7 +196,7 @@ private:
     Q _deattachQ;
     std::vector<int> printAblePathSize;
     std::vector<double> printAbleDurations;
-
+    std::vector<int> saveGraphIdx;
     std::vector<std::thread> active_threads;
 };
 

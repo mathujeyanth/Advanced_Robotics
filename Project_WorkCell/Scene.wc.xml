@@ -17,7 +17,7 @@
 
 	<!--Robot #1-->
 	<Frame name="URReference1" refframe="Table1" type="Movable">
-		<RPY>0 0 0</RPY> <Pos>0 -0.3 0.11</Pos>
+		<RPY>0 0 0</RPY> <Pos>0 -0.2 0.11</Pos>
 	</Frame>
 	<Include file="UR5/UR-6-85-5-A/1_Device.wc.xml" />
 
@@ -35,7 +35,7 @@
 	<!--Robot #2-->
 
 	<Frame name="URReference2" refframe="Table2" type="Movable">
-		<RPY>0 0 0</RPY> <Pos>0 -0.3 0.11</Pos>
+		<RPY>0 0 0</RPY> <Pos>0 -0.2 0.11</Pos>
 	</Frame>
 	<Include file="UR5/UR-6-85-5-A/2_Device.wc.xml" />
 
@@ -64,7 +64,7 @@
 
 		
 	<Frame name="Bottle" refframe="Table2"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0 0.60 0.50 </Pos>
+     <RPY> -90 0 90 </RPY> <Pos> 0 1 0.40 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>
