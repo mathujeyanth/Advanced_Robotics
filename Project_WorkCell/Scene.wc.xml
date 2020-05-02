@@ -1,3 +1,4 @@
+ 
 <WorkCell name="Scene">
 
 	<Frame name="Table1" refframe="WORLD" type="Fixed">
@@ -13,6 +14,14 @@
          	<Polytope file="table/Sigmund_table" />
      		</Drawable>
 	</Frame>
+
+	<Frame name="roof" refframe="WORLD" type="Fixed">
+		<RPY>180 0 0</RPY> <Pos>0 0.6 0.8</Pos>		
+	 	<Drawable name="roof " refframe="Table2">
+         	<Polytope file="roof" />
+     		</Drawable>
+	</Frame>
+
 
 	<!--Robot #1-->
 	<Frame name="URReference1" refframe="Table1" type="Movable">
@@ -51,7 +60,7 @@
 	
 		
 	<Frame name="Bottle" refframe="Table1"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0.35 0.55 0.21 </Pos>
+     <RPY> -90 0 90 </RPY> <Pos> 0.35 0 0.21 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>

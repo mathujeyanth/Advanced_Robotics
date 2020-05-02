@@ -1,4 +1,7 @@
 #include "SamplePlugin.hpp"
+#include <iomanip>
+
+
 
 
 SamplePlugin::SamplePlugin():
@@ -36,8 +39,10 @@ void SamplePlugin::initialize() {
     getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, std::placeholders::_1), this);
 
     // Auto load workcell
-    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/student/Desktop/Project/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
+    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/downloads/SEM 2/Advanced_Robotics/Project_WorkCell/Scene.wc.xml");
     getRobWorkStudio()->setWorkCell(wc);
+    srand(time(NULL)); //Seed for random number generator - Function fRand
+
 
 }
 
@@ -114,6 +119,7 @@ void SamplePlugin::btnPressed() {
                     rw::math::Transform3D<>(rw::math::Vector3D<>(rn_x,rn_y,0.21f),
                                             rw::math::RPY<>(0,0,90*rw::math::Deg2Rad)
                                             ), _state);
+
         getRobWorkStudio()->setState(_state);
     }
     else if (obj == _btnPtP)
@@ -149,30 +155,33 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
-        std::cout << _doubleSpinBox->value() << std::endl;
-        for (int i = 0;i<10;i++)
-        {
-            _timer->stop();
-            rw::math::Math::seed();
-            auto start = std::chrono::high_resolution_clock::now();
-            createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
-            auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-            printAblePathSize.push_back(_path.size());
-            printAbleDurations.push_back(duration.count());
-        }
-        for (int i = 0;i<printAblePathSize.size();i++)
-        {
-            std::cout << printAblePathSize[i] << " ";
-        }
-        std::cout << "\n";
-        for (int i = 0;i<printAbleDurations.size();i++)
-        {
-            std::cout << printAbleDurations[i] << " ";
-        }
-        std::cout << "\n";
-        printAbleDurations.clear();
-        printAblePathSize.clear();
+//        std::cout << _doubleSpinBox->value() << std::endl;
+//        for (int i = 0;i<10;i++)
+//        {
+//            _timer->stop();
+//            rw::math::Math::seed();
+//            auto start = std::chrono::high_resolution_clock::now();
+//            createPathRRTConnect(_wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->getTransform(_state).P(),_doubleSpinBox->value());
+//            auto stop = std::chrono::high_resolution_clock::now();
+//            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+//            printAblePathSize.push_back(_path.size());
+//            printAbleDurations.push_back(duration.count());
+//        }
+//        for (int i = 0;i<printAblePathSize.size();i++)
+//        {
+//            std::cout << printAblePathSize[i] << " ";
+//        }
+//        std::cout << "\n";
+//        for (int i = 0;i<printAbleDurations.size();i++)
+//        {
+//            std::cout << printAbleDurations[i] << " ";
+//        }
+//        std::cout << "\n";
+//        printAbleDurations.clear();
+//        printAblePathSize.clear();
+        std::cout << "printTest button" << std::endl;
+        BottlePRM();
+        std::cout << "printTest button - OVER" << std::endl;
     }
     else if(obj==_btn1){
         if (!_timer->isActive()){
@@ -667,5 +676,327 @@ void SamplePlugin::createPathRRTConnect(rw::math::Vector3D<> to, double eps){
     for (double s = 0.0;s<traj2.duration();s += 0.05)
         tempQPath.push_back(traj2.x(s));
     _path = tempQPath;
+
+}
+
+double SamplePlugin::fRand(double fMin, double fMax)
+{
+    //Code: https://stackoverflow.com/questions/2704521/generate-random-double-numbers-in-c
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
+
+double SamplePlugin::wrapMax(double x, double max)
+{
+    /* integer math: `(max + x % max) % max` */
+    return fmod(max + fmod(x, max), max);
+}
+/* wrap x -> [min,max) */
+double SamplePlugin::wrapMinMax(double x, double min, double max)
+{
+    return min + wrapMax(x - min, max - min);
+}
+
+struct element{int index;rw::math::Q Q1; rw::math::Vector3D<double> Pos; rw::math::Vector3D<double> RPY;}; //Used in TCMP
+struct PRMNode {
+  int id;
+  int parentId;
+  float distanceFromTemp;
+  float queryPathDistance;
+  rw::math::Vector3D<double> Pos;
+  rw::math::Vector3D<double> Ori;
+  std::vector<PRMNode*> children_;
+  std::vector<float> distances_;
+};
+struct PRMEdge {
+  float distance;
+  int ids[2];
+};
+//void minimum(struct Node *ptr, int n, int &min, int &min_diff)
+//{
+//    if (ptr == NULL)
+//        return ;
+
+//    // If n itself is present
+//    if (ptr->data == n)
+//    {
+//        min_diff= n;
+//        return;
+//    }
+
+//    // update min and min_diff by checking current node value
+//    if (min > abs(ptr->data - n))
+//    {
+//        min = abs(ptr->data - n);
+//        min_diff = ptr->data;
+//    }
+
+//    // if n is less than ptr->data then move in left subtree else in right subtree
+//    if (n < ptr->data)
+//        minimum(ptr->left, n, min, min_diff);
+//    else
+//        minimum(ptr->right, n, min, min_diff);
+//}
+void SamplePlugin::BottlePRM(){
+
+    rw::kinematics::MovableFrame::Ptr Bottle = _wc->findFrame<rw::kinematics::MovableFrame>("Bottle");
+    //Eigen::Matrix4f initTransform =Bottle_Frame->getTransform(_state).e();
+    PRMNode head;
+    head.id = 0;
+
+    std::vector<PRMNode> nodePointers;
+    //nodePointers.push_back(head);
+
+    /*
+    rwlibs::proximity::BasicFilterStrategy::Ptr broadphase = ownedPtr(new rwlibs::proximity::BasicFilterStrategy(_wc));
+    CollisionDetector::Ptr collisionDetector = ownedPtr(new CollisionDetector(_wc, rw::proximity::ProximityStrategyYaobi::make(), broadphase));
+
+    //Tool frame of the robot
+    Frame* toolFrame = workcell->findFrame("Robot.TCP");
+    //Frame of the object picked up
+    Frame* objectFrame = workcell->findFrame("Object");
+    //Frame of the table on which the object previously was located.
+    Frame* tableFrame = workcell->findFrame("Table");
+
+    //Remove checking between objectFrame and toolFrame
+    broadphase->exclude(rw::kinematics::FramePair(objectFrame, toolFrame);
+    //Add checking between the objectFrame and the tableFrame
+    broadphase->include(rw::kinematics::FramePair(objectFrame, tableFrame);
+    */
+
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(
+                new rw::proximity::CollisionDetector(_wc,
+                rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    int count = 0;
+    float rn_x,rn_y,rn_z;
+    const int n=10000;
+    cout<<"init adj\n";
+    Eigen::SparseMatrix<float> adj(n,n);
+
+    //float adj[n][n] = {};
+    cout<<"begin while\n";;
+    typedef Eigen::Triplet<double> T;
+    std::vector<T> tripletList;
+    tripletList.reserve(n);
+    while(count < n)
+    {
+        do{
+            rn_x = (rand() % 50)/100.0f;
+            rn_y = ((rand() % 50)/100.0f);
+            rn_z = ((rand() % 10)/100.0f);
+            Bottle->moveTo(
+                        rw::math::Transform3D<>(rw::math::Vector3D<>(rn_x,rn_y,0.21f+rn_z),
+                                                rw::math::RPY<>(0,0,90*rw::math::Deg2Rad)
+                                                ), _state);
+        }
+        while(detector->inCollision(_state,NULL,true));
+        PRMNode temp;
+        temp.Pos = rw::math::Vector3D<>(rn_x,rn_y,0.21f+rn_z);
+        temp.id = count++;
+
+        for(int i =0;i<nodePointers.size();i++)
+        {
+            //nodeDistances.push_back((temp.Pos - nodePointers[i].Pos).norm2());
+            nodePointers[i].distanceFromTemp = (temp.Pos - nodePointers[i].Pos).norm2();
+
+        }
+        /*cout<<"\nBefore sort"<<endl;
+        for(int i =0;i<nodePointers.size();i++)
+            cout<<nodePointers[i].id<<":"<<nodePointers[i].distanceFromTemp<<" "<<nodePointers[i].Pos<<"  ";
+        cout<<endl;*/
+        std::sort(nodePointers.begin(), nodePointers.end(),
+                       [](const auto& i, const auto& j) { return i.distanceFromTemp < j.distanceFromTemp; } );
+        /*cout<<"After sort"<<endl;
+        for(int i =0;i<nodePointers.size();i++)
+            cout<<nodePointers[i].id<<":"<<nodePointers[i].distanceFromTemp<<"  ";
+        cout<<endl;*/
+        //cout<<"sorted "<<count<<"\n";
+
+
+
+        for(int i =0;i<((nodePointers.size() > 10)? 10:nodePointers.size());i++)
+        {
+            //cout<<"i"<<i<<endl;
+            if(nodePointers[i].distanceFromTemp<0.05)
+            {
+                //cout<<"assign adj\n";
+                //adj[nodePointers[i].id][temp.id] = (temp.Pos - nodePointers[i].Pos).norm2();
+                //adj[temp.id][nodePointers[i].id] = (temp.Pos - nodePointers[i].Pos).norm2();
+                tripletList.push_back(T(temp.id,nodePointers[i].id,(temp.Pos - nodePointers[i].Pos).norm2()));
+                tripletList.push_back(T(nodePointers[i].id,temp.id,(temp.Pos - nodePointers[i].Pos).norm2()));
+                //cout<<"assigned adj\n";
+            }
+        }
+        //cout<<"pushing temp\n";
+        nodePointers.push_back(temp);
+        //cout<<"temp pushed\n";
+        /*cout<<"After sort Edges"<<endl;
+        for(int i =0;i<Edges.size();i++)
+            cout<<Edges[i].ids[0]<<" "<<Edges[i].ids[1]<<":"<<Edges[i].distance<<"  ";
+        cout<<endl;*/
+
+    }
+    adj.setFromTriplets(tripletList.begin(), tripletList.end());
+    getRobWorkStudio()->setState(_state);
+
+    cout<<"After sort\n";
+    for(int i =0;i<nodePointers.size();i++)
+        cout<<nodePointers[i].id<<":"<<nodePointers[i].distanceFromTemp<<"  ";
+    cout<<endl;
+    /*cout<<"adj\n";
+    for(int i=0;i<n;i++)
+    {
+
+        for(int j=0;j<n;j++)
+            cout<<setprecision(2)<<adj[i][j]<<" ";
+        cout<<"\n";
+    }*/
+    //QUERY
+    cout<<"\nQUERYING\n";
+    int startnode = 2;
+    rw::math::Vector3D<double> initPos = {0.05, 0.975, 0.247}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
+    rw::math::Vector3D<double> initRPY = {-3.142, -0.003, -1.546};
+
+    float distance[n],pred[n];
+
+    //https://www.tutorialspoint.com/cplusplus-program-for-dijkstra-s-shortest-path-algorithm
+    Eigen::Matrix<double, n, n> cost;
+    int visited[n],mindistance,nextnode,i,j;
+    for(i=0;i<n;i++)
+       for(j=0;j<n;j++)
+            if(adj.coeff(i,j)==0)
+               cost.coeffRef(i,j)=500;
+            else
+               cost.coeffRef(i,j)=adj.coeff(i,j);
+    for(i=0;i<n;i++) {
+       distance[i]=cost.coeffRef(startnode, i);
+       pred[i]=startnode;
+       visited[i]=0;
+    }
+
+    cout<<"cost\n";
+    for(int i=0;i<n;i++)
+    {
+
+        for(int j=0;j<n;j++)
+            cout<<setprecision(2)<<cost[i][j]<<" ";
+        cout<<"\n";
+    }
+
+    distance[startnode]=0;
+    visited[startnode]=1;
+    count=1;
+    while(count<n-1) {
+       mindistance=50000;
+       for(i=0;i<n;i++)
+          if(distance[i]<mindistance&&!visited[i]) {
+          mindistance=distance[i];
+          nextnode=i;
+       }
+       visited[nextnode]=1;
+       for(i=0;i<n;i++)
+          if(!visited[i])
+       if(mindistance+cost[nextnode][i]<distance[i]) {
+          distance[i]=mindistance+cost[nextnode][i];
+          pred[i]=nextnode;
+       }
+       count++;
+    }
+    for(i=0;i<n;i++)
+        if(i!=startnode) {
+           cout<<"\nDistance of node"<<i<<"="<<distance[i];
+           cout<<"\nPath="<<i;
+           j=i;
+           do {
+              j=pred[j];
+              cout<<"<-"<<j;
+           }while(j!=startnode);
+        }
+
+
+}
+
+void SamplePlugin::TCMP(){
+    /// Find initial Q pose
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    cout << "detector " << !detector->inCollision(_state,NULL,true) << endl;
+    Q HOME(6, 1.571, -1.158, -2.728, 0.771, 1.571, 0);
+    _wc->findFrame<rw::kinematics::MovableFrame>("Bottle")->moveTo(
+                rw::math::Transform3D<>(rw::math::Vector3D<>(0.04, 0.835, 0.21),
+                                        rw::math::RPY<>(-1.571, 0, 1.571)
+                                        ), _state);
+    getRobWorkStudio()->setState(_state);// Position of the bottle: Q[6]{0.04, 0.835, 0.11, -1.571, 0, 1.571}
+    //Random q
+    rw::math::Q qVal(6,0,0,0,0,0,0);
+    do{
+        for(int i = 0; i<6;i++){
+            qVal[i] = fRand(-M_PI,M_PI);
+        }
+        _device2->setQ(qVal,_state);
+    }
+    while(detector->inCollision(_state,NULL,true));
+
+    //Update state and get TCP pos
+    cout << "Initial config found - Qval " << qVal << endl;
+    qVal = HOME;
+    _device2->setQ(qVal,_state);
+    getRobWorkStudio()->setState(_state);
+
+    rw::kinematics::Frame* robotTCP = _wc->findFrame("2_UR-6-85-5-A.TCP");
+    rw::math::Transform3D<double> worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+
+    cout << "Postion of end " << worldTTCP.P() << " and rotation in RPY" << rw::math::RPY<double>(worldTTCP.R()) << std::endl;
+    rw::math::Vector3D<double> initPos = {0.05, 0.975, 0.247}; // FOR INV KIN: Q[6]{0.05, 0.975, 0.247, -3.142, -0.003, -1.546}
+    rw::math::Vector3D<double> initRPY = {-3.142, -0.003, -1.546};
+
+
+    rw::math::RPY<double> TCPRPY = rw::math::RPY<double>(worldTTCP.R());
+    rw::math::Vector3D<double> RPYasVec = {TCPRPY[0],TCPRPY[1],TCPRPY[2]};
+
+    rw::math::Vector3D<double> RPYerr = initRPY - RPYasVec;
+    rw::math::Vector3D<double> POSerr = initPos - worldTTCP.P();
+
+    cout << "Pos " << POSerr << " \t norm(POSerr) " << POSerr.norm2() << " \n RPY " << RPYerr << " \t norm(RPY) " << RPYerr.norm2() << endl;
+    rw::math::Q qNew(6,0,0,0,0,0,0);
+    rw::math::Vector3D<double> newRPYerr;
+    rw::math::Vector3D<double> newPOSerr;
+    int counter = 0;
+    //rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    while(POSerr.norm2() > 0.05 || RPYerr.norm2() > 0.05){ //
+        //Add random dq
+        for(int i = 0; i<6;i++){
+            qNew[i] = wrapMinMax(qVal[i]+fRand(-M_PI,M_PI)*0.05,-M_PI,M_PI);
+        }
+
+        _device2->setQ(qNew,_state);
+        worldTTCP = rw::kinematics::Kinematics::worldTframe(robotTCP,_state);
+        TCPRPY = rw::math::RPY<double>(worldTTCP.R());
+        RPYasVec = {TCPRPY[0],TCPRPY[1],TCPRPY[2]};
+        newRPYerr = initRPY - RPYasVec;
+        newPOSerr = initPos - worldTTCP.P();
+
+
+        if( ((newPOSerr.norm2() < POSerr.norm2() && RPYerr.norm2() < 0.05)) || (newPOSerr.norm2() < POSerr.norm2() && newRPYerr.norm2() < RPYerr.norm2()) && !detector->inCollision(_state,NULL,true) ){
+            qVal = qNew;
+            RPYerr = newRPYerr;
+            POSerr = newPOSerr;
+            cout << "update and Qval " << qVal << endl;
+            getRobWorkStudio()->setState(_state);
+        }
+        counter++;
+        if(counter % 10000000 == 0){
+            cout << "Counter value " << counter << endl;
+        }
+    }
+
+    cout<<"SUCCESS! CounterVal " << counter << "\t"<< qVal << endl;
+
+    std::vector<element> Tree;
+
+    Tree.push_back({1,qVal,worldTTCP.P(),RPYasVec});
+    counter = 0;
+    double maxJointStep = rw::math::Deg2Rad*10;
+
+    //while()
 
 }
