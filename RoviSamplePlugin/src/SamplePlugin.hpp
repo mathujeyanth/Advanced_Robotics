@@ -125,6 +125,37 @@ public:
         std::vector<graphNode> nodeVec;
     } robot1Graph,robot2Graph;
 
+    struct D4Node{
+      int x1;
+      int x2;
+      int y1;
+      int y2;
+      std::vector<int> idx;
+      float probability;
+      float accumulatedProbability;
+    };
+
+    struct D4Array{
+
+        std::vector<D4Node> Start;
+        std::vector<D4Node> Goal;
+
+    } Our4Darray;
+
+    struct dualGraphNode{
+        rw::math::Q configuration;
+        int parent;
+    };
+
+    struct dualGraph{
+        std::vector<dualGraphNode> r1Start;
+        std::vector<dualGraphNode> r1Goal;
+
+        std::vector<dualGraphNode> r2Start;
+        std::vector<dualGraphNode> r2Goal;
+
+    } curDualGraph;
+
     struct robotPtr
     {
         graph* ptrGraph;
@@ -167,6 +198,11 @@ private slots:
 
     vector<int> Astar(int startIdx, int goalIdx, int robotNum);
 
+    void DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2,rw::kinematics::State state,int maximumIterations,float jointStep);
+    void DualPath();
+
+    int randExpand(bool start);
+
     float costFunc(int iIdx, int jIdx,int robotNum);
     void setupRobotPtrs();
     void saveTree(int robotNum);
@@ -198,6 +234,8 @@ private:
     std::vector<double> printAbleDurations;
     std::vector<int> saveGraphIdx;
     std::vector<std::thread> active_threads;
+
+    int connectionIdx[2] = {};
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/

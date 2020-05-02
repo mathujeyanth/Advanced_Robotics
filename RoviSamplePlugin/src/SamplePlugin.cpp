@@ -1,10 +1,5 @@
 ﻿#include "SamplePlugin.hpp"
 
-
-
-
-
-
 SamplePlugin::SamplePlugin():
     RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_icon.png"))
 {
@@ -18,7 +13,8 @@ SamplePlugin::SamplePlugin():
 //    connect(_btn_scan       ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 //    connect(_btn0           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_btn_runPath    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
-//    connect(_doubleSpinBox  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
+    connect(_maxIteration  ,SIGNAL(valueChanged(int)),  this, SLOT(btnPressed()) );
+    connect(_jointStepSize  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
 //    connect(_btnPtPi        ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 //    connect(_btnPtP         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_placeBottle    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
@@ -131,14 +127,18 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
+        rw::math::Q conf(6,0.724, -0.928, 1.854, -4.101, 0.437, 1.668);
+
         cout << "Test button pressed" << endl;
-        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
-        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
-        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.45);
-        rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
-        createTree(aPlane,_state,1,10000);
-        lazyConnectGraph(1);
-        lazyFindPath(p1,p3,_state,1);
+//        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
+//        rw::math::Vector3D<> p2 = rw::math::Vector3D<>(0.3,-0.5,0.3);
+//        rw::math::Vector3D<> p3 = rw::math::Vector3D<>(0,0.60,0.45);
+//        rw::geometry::Plane aPlane = rw::geometry::Plane(p1,p2,p3);
+//        createTree(aPlane,_state,1,10000);
+//        lazyConnectGraph(1);
+//        lazyFindPath(p1,p3,_state,1);
+        DualPRM(conf,conf,_state,_maxIteration->value(),_jointStepSize->value());
+        DualPath();
         _timer->stop();
         //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,1,10000));
         //active_threads.push_back(std::thread(&SamplePlugin::createTree,this,aPlane,_state,2,10000));
@@ -1636,6 +1636,356 @@ float SamplePlugin::costFunc(int iIdx, int jIdx, int robotNum)
             return rPtr.ptrGraph->nodeVec[iIdx].connectionVec[i].distance; // .cost
     }
     return 500;
+}
+
+void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2, rw::kinematics::State state, int maximumIterations, float jointStep)
+{
+    curDualGraph.r1Goal.clear();
+    curDualGraph.r2Goal.clear();
+    curDualGraph.r1Start.clear();
+    curDualGraph.r2Start.clear();
+    Our4Darray.Goal.clear();
+    Our4Darray.Start.clear();
+
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+    rw::common::Timer myTimer;
+    dualGraphNode n1, n2, *ptrn1,*ptrn2;
+    int x1,x2,y1,y2;
+    rw::math::Vector3D<> posr1, posr2;
+    std::vector<int> tempVec;
+    tempVec.push_back(0);
+
+    n1.parent = -1;
+    n2.parent = -1;
+
+    n1.configuration = robotPtr1.robot->getQ(state);
+    n2.configuration = robotPtr2.robot->getQ(state);
+
+    curDualGraph.r1Start.push_back(n1);
+    curDualGraph.r2Start.push_back(n2);
+
+    posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
+    posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
+    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+
+    Our4Darray.Start.push_back(D4Node{x1,x2,y1,y2,tempVec,1,0});
+
+    n1.configuration = goalConfRobot1;
+    n2.configuration = goalConfRobot2;
+
+    curDualGraph.r1Goal.push_back(n1);
+    curDualGraph.r2Goal.push_back(n2);
+
+    robotPtr1.robot->setQ(n1.configuration,state);
+    robotPtr2.robot->setQ(n2.configuration,state);
+
+    posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
+    posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
+    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+
+
+    Our4Darray.Goal.push_back(D4Node{x1,x2,y1,y2,tempVec,1,0});
+
+    bool startGraph = false;
+    int iterationCounter = 0;
+    while(iterationCounter<maximumIterations)
+    {
+        if (iterationCounter%100 == 0 && iterationCounter != 0)
+            cout << "Iteration: " << iterationCounter <<"/" << maximumIterations << " with a joint step size of " << jointStep <<endl;
+        iterationCounter++;
+        float dMax = jointStep; // Maximum joint step
+
+        // Find which graph to expand
+        if (rand()%2)
+        {
+
+            int p = randExpand(true);
+
+            ptrn1 = &curDualGraph.r1Start[p];
+            ptrn2 = &curDualGraph.r2Start[p];
+
+            n1.parent = p;
+            n2.parent = p;
+            //cout << "Start Parent: " << p << endl;
+            startGraph = true;
+        }
+        else
+        {
+            int p = randExpand(false);
+
+            ptrn1 = &curDualGraph.r1Goal[p];
+            ptrn2 = &curDualGraph.r2Goal[p];
+
+            n1.parent = p;
+            n2.parent = p;
+            //cout << "Goal Parent: " << p << endl;
+            startGraph = false;
+        }
+
+        while(true)
+        {
+            for(int i = 0; i<6;i++){
+                n1.configuration[i] = wrapMinMax(ptrn1->configuration[i]+fRand(jointConstraints[i][0],jointConstraints[i][1])*dMax,jointConstraints[i][0],jointConstraints[i][1]);
+                n2.configuration[i] = wrapMinMax(ptrn2->configuration[i]+fRand(jointConstraints[i][0],jointConstraints[i][1])*dMax,jointConstraints[i][0],jointConstraints[i][1]);
+            }
+            //cout << "Set Q: " << n1.configuration << " "<< n2.configuration<<  endl;
+            robotPtr1.robot->setQ(n1.configuration,state);
+            robotPtr2.robot->setQ(n2.configuration,state);
+
+            if (!detector->inCollision(state,NULL,true))
+            {
+                //cout << "Expanion" << endl;
+                if (startGraph)
+                {
+                    posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
+                    posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
+                    //cout << "Pos1: " << posr1 << " pos2: " << posr2 << endl;
+                    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+
+                    for (std::vector<D4Node>::iterator it = Our4Darray.Start.begin(); it != Our4Darray.Start.end();++it)
+                    {
+                        //cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                        if ((*it).x1 < x1 || ((*it).y1 < y1 && (*it).x1 == x1) || ((*it).x2 < x2 && (*it).x1 == x1 && (*it).y1 == y1) || ((*it).y2 < y2 && (*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2))
+                        {
+                            tempVec.clear();
+                            tempVec.push_back(curDualGraph.r1Start.size());
+                            Our4Darray.Start.insert(it,D4Node{x1,x2,y1,y2,tempVec,1,0});
+                            cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                            cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                            for (std::vector<D4Node>::iterator it2 = Our4Darray.Goal.begin(); it2 != Our4Darray.Goal.end();++it2)
+                            {
+                                if ((*it).x1 == (*it2).x1 && (*it).y1 == (*it2).y1 && (*it).x2 == (*it2).x2 && (*it).y2 == (*it2).y2)
+                                {
+                                    //cout << "x1: " << (*it).x1 << " " << (*it2).x1 << " x2: " << (*it).x2 << " " << (*it2).x2 << " y1: " << (*it).y1 << " " << (*it2).y1 << " y2: " << (*it).y2 << " " << (*it2).y2 << endl;
+                                    //cout << "Success" << endl;
+                                    connectionIdx[0] = (*it).idx[rand()%int((*it).idx.size())];
+                                    //cout << "Connection " << connectionIdx[0] << " size: "<< curDualGraph.r1Start.size() << endl;
+                                    connectionIdx[1] = (*it2).idx[rand()%int((*it2).idx.size())];
+                                    //cout << "Connection " << connectionIdx[1] << " size: "<< curDualGraph.r1Goal.size() << endl;
+                                    curDualGraph.r1Start.push_back(n1);
+                                    curDualGraph.r2Start.push_back(n2);
+                                    return;
+                                }
+                            }
+                            break;
+                        }
+                        else if ((*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2 && (*it).y2 == y2)
+                        {
+                            (*it).idx.push_back(curDualGraph.r1Start.size());
+                            (*it).probability = 1/(*it).idx.size();
+                            //cout << "Insert element" << endl;
+                            break;
+                        }
+                        else if ((*it).x1 > x1 || ((*it).y1 > y1 && (*it).x1 == x1) || ((*it).x2 > x2 && (*it).x1 == x1 && (*it).y1 == y1) || ((*it).y2 > y2 && (*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2))
+                        {
+                            tempVec.clear();
+                            tempVec.push_back(curDualGraph.r1Start.size());
+                            Our4Darray.Start.insert(it,D4Node{x1,x2,y1,y2,tempVec,1,0});
+                            cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                            cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                            for (std::vector<D4Node>::iterator it2 = Our4Darray.Goal.begin(); it2 != Our4Darray.Goal.end();++it2)
+                            {
+                                if ((*it).x1 == (*it2).x1 && (*it).y1 == (*it2).y1 && (*it).x2 == (*it2).x2 && (*it).y2 == (*it2).y2)
+                                {
+                                    //cout << "x1: " << (*it).x1 << " " << (*it2).x1 << " x2: " << (*it).x2 << " " << (*it2).x2 << " y1: " << (*it).y1 << " " << (*it2).y1 << " y2: " << (*it).y2 << " " << (*it2).y2 << endl;
+                                    //cout << "Success" << endl;
+                                    connectionIdx[0] = (*it).idx[rand()%int((*it).idx.size())];
+                                    //cout << "Connection " << connectionIdx[0] << " size: "<< curDualGraph.r1Start.size() << endl;
+                                    connectionIdx[1] = (*it2).idx[rand()%(*it2).idx.size()];
+                                    //cout << "Connection " << connectionIdx[1] << " size: "<< curDualGraph.r1Goal.size() << endl;
+                                    curDualGraph.r1Start.push_back(n1);
+                                    curDualGraph.r2Start.push_back(n2);
+                                    return;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    curDualGraph.r1Start.push_back(n1);
+                    curDualGraph.r2Start.push_back(n2);
+
+                }
+                else
+                {
+                    posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
+                    posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
+                    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+                    //cout << "Pos1: " << posr1 << " pos2: " << posr2 << endl;
+                    for (std::vector<D4Node>::iterator it = Our4Darray.Goal.begin(); it != Our4Darray.Goal.end();++it)
+                    {
+                        //cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                        if (((*it).x1 < x1) || ((*it).y1 < y1 && (*it).x1 == x1) || ((*it).x2 < x2 && (*it).x1 == x1 && (*it).y1 == y1) || ((*it).y2 < y2 && (*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2))
+                        {
+                            tempVec.clear();
+                            tempVec.push_back(curDualGraph.r1Goal.size());
+                            Our4Darray.Goal.insert(it,D4Node{x1,x2,y1,y2,tempVec,1,0});
+                            cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                            cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                            for (std::vector<D4Node>::iterator it2 = Our4Darray.Start.begin(); it2 != Our4Darray.Start.end();++it2)
+                            {
+                                if ((*it).x1 == (*it2).x1 && (*it).y1 == (*it2).y1 && (*it).x2 == (*it2).x2 && (*it).y2 == (*it2).y2)
+                                {
+                                    //cout << "x1: " << (*it).x1 << " " << (*it2).x1 << " x2: " << (*it).x2 << " " << (*it2).x2 << " y1: " << (*it).y1 << " " << (*it2).y1 << " y2: " << (*it).y2 << " " << (*it2).y2 << endl;
+                                    //cout << "Success" << endl;
+                                    connectionIdx[1] = (*it).idx[rand()%(*it).idx.size()];
+                                    //cout << "Connection " << connectionIdx[1] << " size: "<< curDualGraph.r1Goal.size() << endl;
+                                    connectionIdx[0] = (*it2).idx[rand()%(*it2).idx.size()];
+                                    //cout << "Connection " << connectionIdx[0] << " size: "<< curDualGraph.r1Start.size() << endl;
+                                    curDualGraph.r1Goal.push_back(n1);
+                                    curDualGraph.r2Goal.push_back(n2);
+                                    return;
+                                }
+                            }
+                            break;
+                        }
+                        else if ((*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2 && (*it).y2 == y2)
+                        {
+                            (*it).idx.push_back(curDualGraph.r1Goal.size());
+                            (*it).probability = 1/(*it).idx.size();
+                            //cout << "Insert element" << endl;
+                            break;
+                        }
+                        else if (((*it).x1 > x1) || ((*it).y1 > y1 && (*it).x1 == x1) || ((*it).x2 > x2 && (*it).x1 == x1 && (*it).y1 == y1) || ((*it).y2 > y2 && (*it).x1 == x1 && (*it).y1 == y1 && (*it).x2 == x2))
+                        {
+                            tempVec.clear();
+                            tempVec.push_back(curDualGraph.r1Goal.size());
+                            Our4Darray.Goal.insert(it,D4Node{x1,x2,y1,y2,tempVec,1,0});
+                            cout << "x1: " << (*it).x1 << " " << x1 << " x2: " << (*it).x2 << " " << x2 << " y1: " << (*it).y1 << " " << y1 << " y2: " << (*it).y2 << " " << y2 << endl;
+                            cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                            for (std::vector<D4Node>::iterator it2 = Our4Darray.Start.begin(); it2 != Our4Darray.Start.end();++it2)
+                            {
+                                if ((*it).x1 == (*it2).x1 && (*it).y1 == (*it2).y1 && (*it).x2 == (*it2).x2 && (*it).y2 == (*it2).y2)
+                                {
+                                    //cout << "x1: " << (*it).x1 << " " << (*it2).x1 << " x2: " << (*it).x2 << " " << (*it2).x2 << " y1: " << (*it).y1 << " " << (*it2).y1 << " y2: " << (*it).y2 << " " << (*it2).y2 << endl;
+                                    //cout << "Success" << endl;
+                                    connectionIdx[1] = (*it).idx[rand()%(*it).idx.size()];
+                                    //cout << "Connection " << connectionIdx[1] << " size: "<< curDualGraph.r1Goal.size() << endl;
+                                    connectionIdx[0] = (*it2).idx[rand()%(*it2).idx.size()];
+                                    //cout << "Connection " << connectionIdx[0] << " size: "<< curDualGraph.r1Start.size() << endl;
+                                    curDualGraph.r1Goal.push_back(n1);
+                                    curDualGraph.r2Goal.push_back(n2);
+                                    return;
+                                }
+                            }
+                            break;
+                        }
+
+                    }
+
+                    curDualGraph.r1Goal.push_back(n1);
+                    curDualGraph.r2Goal.push_back(n2);
+                }
+//                cout << "Size start: " << curDualGraph.r1Start.size() << endl;
+//                cout << "Size goal: " << curDualGraph.r1Goal.size() << endl;
+                break;
+            }
+            dMax /= 2;
+        }
+
+
+    }
+    cout << "I failed you master :("<< endl;
+}
+
+void SamplePlugin::DualPath()
+{
+//    cout << "Print dual graph" << endl;
+//    for (int i = 0;i<curDualGraph.r1Goal.size();i++)
+//        cout << "Idx: "<< i << " Parent: "<< curDualGraph.r1Goal[i].parent <<" Config:" <<curDualGraph.r1Goal[i].configuration << endl;
+//    for (int i = 0;i<curDualGraph.r2Goal.size();i++)
+//        cout << "Idx: "<< i << " Parent: "<< curDualGraph.r2Goal[i].parent <<" Config:" <<curDualGraph.r2Goal[i].configuration << endl;
+//    for (int i = 0;i<curDualGraph.r1Start.size();i++)
+//        cout << "Idx: "<< i << " Parent: "<< curDualGraph.r1Start[i].parent <<" Config:" <<curDualGraph.r1Start[i].configuration << endl;
+//    for (int i = 0;i<curDualGraph.r2Start.size();i++)
+//        cout << "Idx: "<< i << " Parent: "<< curDualGraph.r2Start[i].parent <<" Config:" <<curDualGraph.r2Start[i].configuration << endl;
+
+    std::vector<rw::math::Q> r1Path,r2Path;
+    int index = connectionIdx[1];
+
+    while(index != -1)
+    {
+        cout << "Add index to path: " << index << endl;
+        r1Path.push_back(curDualGraph.r1Goal[index].configuration);
+        r2Path.push_back(curDualGraph.r2Goal[index].configuration);
+        cout << "Q: " << curDualGraph.r1Goal[index].configuration << " " << curDualGraph.r2Goal[index].configuration << endl;
+        index = curDualGraph.r2Goal[index].parent;
+
+//        cout << "Parent: " << index << endl;
+    }
+
+    index = connectionIdx[0];
+
+    while(index != -1)
+    {
+        cout << "Add index to path: " << index << endl;
+        r1Path.insert(r1Path.begin(),curDualGraph.r1Start[index].configuration);
+        r2Path.insert(r2Path.begin(),curDualGraph.r2Start[index].configuration);
+        cout << "Q: " << curDualGraph.r1Start[index].configuration << " " << curDualGraph.r2Start[index].configuration << endl;
+        index = curDualGraph.r2Start[index].parent;
+
+    }
+
+    _path1 = r1Path;
+    _path2 = r2Path;
+}
+
+int SamplePlugin::randExpand(bool start)
+{
+
+    if (start)
+    {
+        float accu = 0;
+        for(int i = 0;i<Our4Darray.Start.size();i++)
+        {
+            Our4Darray.Start[i].accumulatedProbability = accu;
+            accu += Our4Darray.Start[i].probability;
+        }
+        float r_float = static_cast <float> (rand())/ (static_cast <float> (RAND_MAX/accu));
+        int idx = 0;
+        //cout << "accu: " << accu << endl;
+        //cout << "r_float: " << r_float << endl;
+        for(int i = 0;i<Our4Darray.Start.size();i++)
+        {
+            //cout << "Accu: " << Our4Darray.Start[i].accumulatedProbability << endl;
+            if(Our4Darray.Start[i].accumulatedProbability>r_float)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        //cout << "size " << Our4Darray.Start[idx].idx.size() << endl;
+
+        return Our4Darray.Start[idx].idx[rand()%Our4Darray.Start[idx].idx.size()];
+    }
+    else
+    {
+        float accu = 0;
+        for(int i = 0;i<Our4Darray.Goal.size();i++)
+        {
+            Our4Darray.Goal[i].accumulatedProbability = accu;
+            accu += Our4Darray.Goal[i].probability;
+        }
+        float r_float = static_cast <float> (rand())/ (static_cast <float> (RAND_MAX/accu));
+        //cout << "accu: " << accu << endl;
+        //cout << "r_float: " << r_float << endl;
+        int idx = 0;
+
+        for(int i = 0;i<Our4Darray.Goal.size();i++)
+        {
+            //cout << "Accu: " << Our4Darray.Goal[i].accumulatedProbability << endl;
+            if(Our4Darray.Goal[i].accumulatedProbability>r_float)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        //cout << "size " << Our4Darray.Goal[idx].idx.size() << endl;
+
+        return Our4Darray.Goal[idx].idx[rand()%Our4Darray.Goal[idx].idx.size()];
+    }
 }
 
 void SamplePlugin::saveTree(int robotNum)
