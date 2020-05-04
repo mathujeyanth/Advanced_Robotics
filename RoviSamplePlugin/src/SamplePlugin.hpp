@@ -200,6 +200,11 @@ private slots:
 
     void DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2,rw::kinematics::State state,int maximumIterations,float jointStep);
     void DualPath();
+    bool DualCanConnect(rw::math::Q r1q1, rw::math::Q r1q2,rw::math::Q r2q1, rw::math::Q r2q2, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
+
+    QPath RRTpath(QPath path);
+
+    void printDualTree();
 
     int randExpand(bool start);
 
