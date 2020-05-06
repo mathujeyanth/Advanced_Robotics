@@ -202,7 +202,9 @@ private slots:
     void DualPath();
     bool DualCanConnect(rw::math::Q r1q1, rw::math::Q r1q2,rw::math::Q r2q1, rw::math::Q r2q2, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
 
-    QPath RRTpath(QPath path);
+    void LIPpath(QPath path1, QPath path2);
+
+    void DualShortcut(QPath r1Path, QPath r2Path, int maxIterations);
 
     void printDualTree();
 
@@ -220,7 +222,7 @@ private:
     QTimer* _timer;
     QTimer* _timer25D;
     float jointConstraints[6][2] = {{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-3.142,3.142}};
-    float jointWeights[6] = {2.0,3.0,3.0,0.5,0.5,0.5};
+    float jointWeights[6] = {3,2,2,1,1,1};
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
