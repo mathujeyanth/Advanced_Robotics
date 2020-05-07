@@ -14,6 +14,7 @@ SamplePlugin::SamplePlugin():
 //    connect(_btn0           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_btn_runPath    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_maxIteration  ,SIGNAL(valueChanged(int)),  this, SLOT(btnPressed()) );
+    connect(_cellSize  ,SIGNAL(valueChanged(int)),  this, SLOT(btnPressed()) );
     connect(_jointStepSize  ,SIGNAL(valueChanged(double)),  this, SLOT(btnPressed()) );
 //    connect(_btnPtPi        ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 //    connect(_btnPtP         ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
@@ -107,7 +108,7 @@ void SamplePlugin::btnPressed() {
     {
         _timer->stop();
         //rw::math::Math::seed();
-        Q to(6, 1.571, -1.158, -2.728, 0.771, 1.571, 0); //From pose estimation
+        Q to(6, 1.296, -1.689, -1.452, -1.577, 1.57, -0.275);//From pose estimation
         _device1->setQ(to,_state);
         _device2->setQ(to,_state);
         getRobWorkStudio()->setState(_state);
@@ -127,7 +128,7 @@ void SamplePlugin::btnPressed() {
     }
     else if (obj == _printTest)
     {
-        rw::math::Q conf(6,1.44, -0.655, 1.244, -3.534, -1.244, 1.658);
+        rw::math::Q conf(6,0.8, -0.623, -2.059, -2.035, 1.566, -0.771);
 
         cout << "Test button pressed" << endl;
 //        rw::math::Vector3D<> p1 = rw::math::Vector3D<>(-0.3,-0.5,0.3);
@@ -137,7 +138,7 @@ void SamplePlugin::btnPressed() {
 //        createTree(aPlane,_state,1,10000);
 //        lazyConnectGraph(1);
 //        lazyFindPath(p1,p3,_state,1);
-        DualPRM(conf,conf,_state,_maxIteration->value(),_jointStepSize->value());
+        DualPRM(conf,conf,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
         DualPath();
         printDualTree();
         _timer->stop();
@@ -1639,7 +1640,7 @@ float SamplePlugin::costFunc(int iIdx, int jIdx, int robotNum)
     return 500;
 }
 
-void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2, rw::kinematics::State state, int maximumIterations, float jointStep)
+void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2, rw::kinematics::State state, int maximumIterations, float jointStep, int cellSize)
 {
     curDualGraph.r1Goal.clear();
     curDualGraph.r2Goal.clear();
@@ -1652,6 +1653,7 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
     rw::common::Timer myTimer;
     dualGraphNode n1, n2, *ptrn1,*ptrn2;
     int x1,x2,y1,y2;
+    int newCellSize = 100 * (1.0/float(cellSize));
     rw::math::Vector3D<> posr1, posr2;
     std::vector<int> tempVec;
     tempVec.push_back(0);
@@ -1671,7 +1673,7 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
 
     posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
     posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
-    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+    x1 = posr1[0]*newCellSize, x2 = posr2[0]*newCellSize, y1 =  posr1[1]*newCellSize, y2 =  posr2[1]*newCellSize;
 
     Our4Darray.Start.push_back(D4Node{x1,x2,y1,y2,tempVec,1,0});
 
@@ -1690,7 +1692,7 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
     }
     posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
     posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
-    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+    x1 = posr1[0]*newCellSize, x2 = posr2[0]*newCellSize, y1 =  posr1[1]*newCellSize, y2 =  posr2[1]*newCellSize;
 
 
     Our4Darray.Goal.push_back(D4Node{x1,x2,y1,y2,tempVec,1,0});
@@ -1741,12 +1743,55 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
             //cout << "Set Q: " << n1.configuration << " "<< n2.configuration<<  endl;
             robotPtr1.robot->setQ(n1.configuration,state);
             robotPtr2.robot->setQ(n2.configuration,state);
-            //rw::math::Q tempQ = n1.configuration-ptrn1->configuration;
-            //float cDist1 = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
-            //tempQ = n2.configuration-ptrn2->configuration;
-            //float cDist2 = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
-            //float dist = (cDist1>cDist2)?cDist1:cDist2;
-            int splits = int(ceil(dMax*10))+1;
+            float curDist;
+            if (startGraph)
+            {
+                std::vector<dualGraphNode>::iterator r1Parent = curDualGraph.r1Start.begin();
+                std::vector<dualGraphNode>::iterator r2Parent = curDualGraph.r2Start.begin();
+                curDist = weigthedNorm2(n1.configuration,(*r1Parent).configuration) + weigthedNorm2(n2.configuration,(*r2Parent).configuration);
+                int curParent = 0;
+                n1.parent = curParent;
+                n2.parent = curParent;
+                while(++r1Parent != curDualGraph.r1Start.end() && ++r2Parent != curDualGraph.r2Start.end())
+                {
+                    float newDist = (n1.configuration-(*r1Parent).configuration).norm2() + (n2.configuration-(*r2Parent).configuration).norm2();
+                    if (newDist < curDist)
+                    {
+                        n1.parent = curParent;
+                        n2.parent = curParent;
+                        ptrn1 = &curDualGraph.r1Start[curParent];
+                        ptrn2 = &curDualGraph.r2Start[curParent];
+                        curDist = newDist;
+                    }
+                    //
+                    curParent++;
+                }
+            }
+            else
+            {
+                std::vector<dualGraphNode>::iterator r1Parent = curDualGraph.r1Goal.begin();
+                std::vector<dualGraphNode>::iterator r2Parent = curDualGraph.r2Goal.begin();
+                curDist = weigthedNorm2(n1.configuration,(*r1Parent).configuration) + weigthedNorm2(n2.configuration,(*r2Parent).configuration);
+                int curParent = 0;
+                n1.parent = curParent;
+                n2.parent = curParent;
+                while(++r1Parent != curDualGraph.r1Goal.end() && ++r2Parent != curDualGraph.r2Goal.end())
+                {
+                    float newDist = (n1.configuration-(*r1Parent).configuration).norm2() + (n2.configuration-(*r2Parent).configuration).norm2();
+                    if (newDist < curDist)
+                    {
+                        n1.parent = curParent;
+                        n2.parent = curParent;
+                        ptrn1 = &curDualGraph.r1Goal[curParent];
+                        ptrn2 = &curDualGraph.r2Goal[curParent];
+                        curDist = newDist;
+                    }
+                    //
+                    curParent++;
+                }
+            }
+
+            int splits = int(ceil(curDist/2))+1;
 
             if (!detector->inCollision(state,NULL,true)
                     && DualCanConnect(n1.configuration,ptrn1->configuration,n2.configuration,ptrn2->configuration,detector,state,splits))
@@ -1757,7 +1802,7 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                     posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
                     posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
                     //cout << "Pos1: " << posr1 << " pos2: " << posr2 << endl;
-                    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+                    x1 = posr1[0]*newCellSize, x2 = posr2[0]*newCellSize, y1 =  posr1[1]*newCellSize, y2 =  posr2[1]*newCellSize;
                     auto iter = std::find_if(Our4Darray.Start.begin(),Our4Darray.Start.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                     if (iter == Our4Darray.Start.end())
                     {
@@ -1766,40 +1811,27 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         tempVec.push_back(curDualGraph.r1Start.size());
                         Our4Darray.Start.insert(iter,D4Node{x1,x2,y1,y2,tempVec,1,0});
                         cout << "x1: " << x1 << " x2: " << x2 << " y1: " << y1 << " y2: " << y2 << endl;
-                        cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                        cout << "Insert node with parent "<<  n1.parent << endl;
                         auto iter2 = std::find_if(Our4Darray.Goal.begin(),Our4Darray.Goal.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                         if (iter2 != Our4Darray.Goal.end())
                         {
                             curDualGraph.r1Start.push_back(n1);
                             curDualGraph.r2Start.push_back(n2);
-                            float shortestSum = 9999.9;
-                            int jIdx, iIdx;
-                            for (int i = 0;i<(*iter).idx.size();i++)
+                            cout << "\tTrying to connect graphs\t" << endl;
+                            rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[0]].configuration;
+                            rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[0]].configuration;
+                            rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[0]].configuration;
+                            rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[0]].configuration;
+                            float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
+                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Goal[0].configuration,n2.configuration,curDualGraph.r2Goal[0].configuration,detector,state,int(someSum)+1))
                             {
-                                for (int j = 0;j<(*iter2).idx.size();j++)
-                                {
-                                    rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[i]].configuration;
-                                    rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[i]].configuration;
-                                    rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[j]].configuration;
-                                    rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[j]].configuration;
-                                    float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
-                                    if ( someSum < shortestSum)
-                                        jIdx = j, iIdx = i, shortestSum = someSum;
-
-                                }
-                            }
-                            cout << "Node inserted, shortestsum: " << shortestSum << endl;
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Goal[jIdx].configuration,n2.configuration,curDualGraph.r2Goal[jIdx].configuration,detector,state,int(shortestSum)+1))
-                            {
-                                connectionIdx[0] = (*iter).idx[iIdx];
-                                connectionIdx[1] = (*iter2).idx[jIdx];
+                                connectionIdx[0] = (*iter).idx[0];
+                                connectionIdx[1] = (*iter2).idx[0];
 
                                 cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
                                 return;
                             }
-                            else
-                                break;
-
+                            break;
                         }
                     }
                     else
@@ -1807,39 +1839,6 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         // insert element
                         (*iter).idx.push_back(curDualGraph.r1Start.size());
                         (*iter).probability = 1.0/float((*iter).idx.size());
-                        auto iter2 = std::find_if(Our4Darray.Goal.begin(),Our4Darray.Goal.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
-                        if (iter2 != Our4Darray.Goal.end())
-                        {
-                            curDualGraph.r1Start.push_back(n1);
-                            curDualGraph.r2Start.push_back(n2);
-                            float shortestSum = 9999.9;
-                            int jIdx, iIdx;
-                            for (int i = 0;i<(*iter).idx.size();i++)
-                            {
-                                for (int j = 0;j<(*iter2).idx.size();j++)
-                                {
-                                    rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[i]].configuration;
-                                    rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[i]].configuration;
-                                    rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[j]].configuration;
-                                    rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[j]].configuration;
-                                    float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
-                                    if ( someSum < shortestSum)
-                                        jIdx = j, iIdx = i, shortestSum = someSum;
-
-                                }
-                            }
-                            cout << "Inserted element, shortest sum: "<< shortestSum << endl;
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Goal[jIdx].configuration,n2.configuration,curDualGraph.r2Goal[jIdx].configuration,detector,state,int(shortestSum)+1))
-                            {
-                                connectionIdx[0] = (*iter).idx[iIdx];
-                                connectionIdx[1] = (*iter2).idx[jIdx];
-
-                                cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
-                                return;
-                            }
-                            else
-                                break;
-                        }
                         //cout << "Insert element" << endl;
 
                     }
@@ -1851,7 +1850,7 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                 {
                     posr1 = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
                     posr2 = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
-                    x1 = posr1[0]*10, x2 = posr2[0]*10, y1 =  posr1[1]*10, y2 =  posr2[1]*10;
+                    x1 = posr1[0]*newCellSize, x2 = posr2[0]*newCellSize, y1 =  posr1[1]*newCellSize, y2 =  posr2[1]*newCellSize;
                     //cout << "Pos1: " << posr1 << " pos2: " << posr2 << endl;
                     auto iter = std::find_if(Our4Darray.Goal.begin(),Our4Darray.Goal.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                     if (iter == Our4Darray.Goal.end())
@@ -1861,39 +1860,27 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         tempVec.push_back(curDualGraph.r1Goal.size());
                         Our4Darray.Goal.insert(iter,D4Node{x1,x2,y1,y2,tempVec,1,0});
                         cout << "x1: " << x1 << " x2: " << x2 << " y1: " << y1 << " y2: " << y2 << endl;
-                        cout << "Insert node with parent "<<  tempVec[0]<< endl;
+                        cout << "Insert node with parent "<<  n1.parent << endl;
                         auto iter2 = std::find_if(Our4Darray.Start.begin(),Our4Darray.Start.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                         if (iter2 != Our4Darray.Start.end())
                         {
                             curDualGraph.r1Goal.push_back(n1);
                             curDualGraph.r2Goal.push_back(n2);
-                            float shortestSum = 9999.9;
-                            int jIdx, iIdx;
-                            for (int i = 0;i<(*iter).idx.size();i++)
+                            cout << "\tTrying to connect graphs\t" << endl;
+                            rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[0]].configuration;
+                            rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[0]].configuration;
+                            rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[0]].configuration;
+                            rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[0]].configuration;
+                            float someSum = ((q1-q3).norm2()+(q2-q4).norm2())/2;
+                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Start[0].configuration,n2.configuration,curDualGraph.r2Start[0].configuration,detector,state,int(someSum)+1))
                             {
-                                for (int j = 0;j<(*iter2).idx.size();j++)
-                                {
-                                    rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[i]].configuration;
-                                    rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[i]].configuration;
-                                    rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[j]].configuration;
-                                    rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[j]].configuration;
-                                    float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
-                                    if ( someSum < shortestSum)
-                                        jIdx = j, iIdx = i, shortestSum = someSum;
-
-                                }
-                            }
-                            cout << "Node inserted, shortestsum: " << shortestSum << endl;
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Start[jIdx].configuration,n2.configuration,curDualGraph.r2Start[jIdx].configuration,detector,state,int(shortestSum)+1))
-                            {
-                                connectionIdx[0] = (*iter).idx[iIdx];
-                                connectionIdx[1] = (*iter2).idx[jIdx];
+                                connectionIdx[0] = (*iter).idx[0];
+                                connectionIdx[1] = (*iter2).idx[0];
 
                                 cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
                                 return;
                             }
-                            else
-                                break;
+                            break;
                         }
                     }
                     else
@@ -1901,39 +1888,6 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         // insert element
                         (*iter).idx.push_back(curDualGraph.r1Goal.size());
                         (*iter).probability = 1.0/float((*iter).idx.size());
-                        auto iter2 = std::find_if(Our4Darray.Start.begin(),Our4Darray.Start.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
-                        if (iter2 != Our4Darray.Start.end())
-                        {
-                            curDualGraph.r1Goal.push_back(n1);
-                            curDualGraph.r2Goal.push_back(n2);
-                            float shortestSum = 9999.9;
-                            int jIdx, iIdx;
-                            for (int i = 0;i<(*iter).idx.size();i++)
-                            {
-                                for (int j = 0;j<(*iter2).idx.size();j++)
-                                {
-                                    rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[i]].configuration;
-                                    rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[i]].configuration;
-                                    rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[j]].configuration;
-                                    rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[j]].configuration;
-                                    float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
-                                    if ( someSum < shortestSum)
-                                        jIdx = j, iIdx = i, shortestSum = someSum;
-
-                                }
-                            }
-                            cout << "Inserted element, shortest sum: "<< shortestSum << endl;
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Start[jIdx].configuration,n2.configuration,curDualGraph.r2Start[jIdx].configuration,detector,state,int(shortestSum)+1))
-                            {
-                                connectionIdx[0] = (*iter).idx[iIdx];
-                                connectionIdx[1] = (*iter2).idx[jIdx];
-
-                                cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
-                                return;
-                            }
-                            else
-                                break;
-                        }
                         //cout << "Insert element" << endl;
 
                     }
@@ -1956,6 +1910,12 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
     connectionIdx[1] = 0;
     cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
     cout << "I failed you master :("<< endl;
+}
+
+float SamplePlugin::weigthedNorm2(rw::math::Q q1, rw::math::Q q2)
+{
+    rw::math::Q tempQ = q1-q2;
+    return sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
 }
 
 void SamplePlugin::DualPath()
@@ -2009,39 +1969,34 @@ void SamplePlugin::DualShortcut(QPath r1Path, QPath r2Path, int maxIterations)
     LIPpath(r1Path,r2Path);
     QPath r1PathLIP = _path1;
     QPath r2PathLIP = _path2;
-    vector<int> PathIdx;
-    int curIdx = 0;
-    float min = 9999.9;
-    for(int i = 0;i<r1PathLIP.size();i++)
-    {
-        float dist = (r1PathLIP[i]-r1Path[curIdx]).norm2();
-        if (dist < min)
-        {
-            min = dist;
-        }
-        else
-        {
-            curIdx++;
-            min = (r1PathLIP[i]-r1Path[curIdx]).norm2();
-            PathIdx.push_back(i-1);
-        }
-    }
+//    vector<int> PathIdx;
+//    int curIdx = 0;
+//    float min = 9999.9;
+//    for(int i = 0;i<r1PathLIP.size();i++)
+//    {
+//        float dist = (r1PathLIP[i]-r1Path[curIdx]).norm2();
+//        if (dist < min)
+//        {
+//            min = dist;
+//        }
+//        else
+//        {
+//            curIdx++;
+//            min = (r1PathLIP[i]-r1Path[curIdx]).norm2();
+//            PathIdx.push_back(i-1);
+//        }
+//    }
     cout << "Path length before pruning: " << r1PathLIP.size() << endl;
     myTimer.resetAndResume();
-    while(iteration < maxIterations && PathIdx.size() > 2)
+    while(iteration < maxIterations)
     {
         // Find indexes to use
-        int r_1 = rand()%(PathIdx.size()-2),r_2 = rand()%(PathIdx.size()-r_1-2) + (r_1 + 1),r_3 = rand()%(PathIdx.size()-r_2-1) + r_2, r_4 = rand()%(PathIdx.size()-r_3-1) + (r_3 + 1);
-        int idx1 = rand()%(PathIdx[r_2]-PathIdx[r_1]) + PathIdx[r_1], idx2 = rand()%(PathIdx[r_4]-PathIdx[r_3]) + PathIdx[r_3];
+        //int r_1 = rand()%(PathIdx.size()-2),r_2 = rand()%(PathIdx.size()-r_1-2) + (r_1 + 1),r_3 = rand()%(PathIdx.size()-r_2-1) + r_2, r_4 = rand()%(PathIdx.size()-r_3-1) + (r_3 + 1);
+        int idx1 = rand()%(r1PathLIP.size()-2)+1, idx2 = rand()%(r1PathLIP.size()-idx1-1) + idx1;
 
-        rw::math::Q tempQ = r1PathLIP[idx1]-r1PathLIP[idx2];
-        float cDist1 = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
-        tempQ = r2PathLIP[idx1]-r2PathLIP[idx2];
-        float cDist2 = sqrt(tempQ(0)*tempQ(0)*jointWeights[0]+tempQ(1)*tempQ(1)*jointWeights[1]+tempQ(2)*tempQ(2)*jointWeights[2]+tempQ(3)*tempQ(3)*jointWeights[3]+tempQ(4)*tempQ(4)*jointWeights[4]+tempQ(5)*tempQ(5)*jointWeights[5]);
-        float dist = (cDist1>cDist2)?cDist1:cDist2;
-        int splits = int(ceil(dist))+1;
-        cout <<"Dist1: " << cDist1 << " dist2: " << cDist2 << " splits:" << splits << endl;
-        if (DualCanConnect(r1PathLIP[idx1],r2PathLIP[idx1],r1PathLIP[idx2],r2PathLIP[idx2],detector,state,splits))
+        int splits = int(ceil(weigthedNorm2(r1PathLIP[idx1],r1PathLIP[idx2])+weigthedNorm2(r2PathLIP[idx1],r2PathLIP[idx2])))+1;
+        cout << " splits:" << splits << endl;
+        if (DualCanConnect(r1PathLIP[idx1],r1PathLIP[idx2],r2PathLIP[idx1],r2PathLIP[idx2],detector,state,splits))
         {
             QPath tempQPath1, tempQPath2;
             tempQPath1.push_back(r1PathLIP[idx1]);
@@ -2055,25 +2010,17 @@ void SamplePlugin::DualShortcut(QPath r1Path, QPath r2Path, int maxIterations)
             QPath::iterator it1 = r1PathLIP.begin()+idx1, it2 = r1PathLIP.begin()+idx2;
             QPath::iterator it3 = r2PathLIP.begin()+idx1, it4 = r2PathLIP.begin()+idx2;
 
-            int difIdxBefore = idx2-idx1, difIdxAfter = _path1.size();
-
-            if (difIdxBefore < _path1.size())
-            {
-                iteration++;
-                continue;
-            }
-
-
-            for (int i = r_1+1;i<PathIdx.size();i++)
-            {
-                if (i < idx2)
-                {
-                    PathIdx.erase(PathIdx.begin()+i);
-                    i--;
-                }
-                else
-                    PathIdx[i] = (PathIdx[i]-difIdxBefore) + difIdxAfter;
-            }
+//           int difIdxBefore = idx2-idx1, difIdxAfter = _path1.size();
+//            for (int i = r_1+1;i<PathIdx.size();i++)
+//            {
+//                if (i < idx2)
+//                {
+//                    PathIdx.erase(PathIdx.begin()+i);
+//                    i--;
+//                }
+//                else
+//                    PathIdx[i] = (PathIdx[i]-difIdxBefore) + difIdxAfter;
+//            }
 
             r1PathLIP.erase(it1,it2);
             for (int i = 0;i<_path1.size();i++)

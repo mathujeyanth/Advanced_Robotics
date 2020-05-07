@@ -198,7 +198,7 @@ private slots:
 
     vector<int> Astar(int startIdx, int goalIdx, int robotNum);
 
-    void DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2,rw::kinematics::State state,int maximumIterations,float jointStep);
+    void DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot2,rw::kinematics::State state,int maximumIterations,float jointStep, int cellSize);
     void DualPath();
     bool DualCanConnect(rw::math::Q r1q1, rw::math::Q r1q2,rw::math::Q r2q1, rw::math::Q r2q2, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
 
@@ -209,6 +209,7 @@ private slots:
     void printDualTree();
 
     int randExpand(bool start);
+    float weigthedNorm2(rw::math::Q q1, rw::math::Q q2);
 
     float costFunc(int iIdx, int jIdx,int robotNum);
     void setupRobotPtrs();
