@@ -51,28 +51,28 @@
 	</Frame>
 	
 	<Frame name="preMatingArea1" refframe="Table1" type="Movable">
-		<RPY>0 0 90</RPY> <Pos>0 0.45 0.50</Pos>
+		<RPY>90 0 90</RPY> <Pos>0 0.40 0.50</Pos>
 	</Frame>
 
 	<Frame name="preMatingArea2" refframe="Table2" type="Movable">
-		<RPY>0 0 90</RPY> <Pos>0 0.45 0.50</Pos>
+		<RPY>90 0 90</RPY> <Pos>0 0.40 0.50</Pos>
 	</Frame>
 
 	<Frame name="matingArea" refframe="Table2" type="Movable">
 		<RPY>0 0 90</RPY> <Pos>0 0.60 0.50</Pos>
 	</Frame>
-	<Frame name="legs1" refframe="WORLD" type="Fixed">
+	<!--Frame name="legs1" refframe="WORLD" type="Fixed">
 		<RPY>180 0 0</RPY> <Pos>0 1.2 0.6</Pos>		
 	 	<Drawable name="Table2" refframe="Table2">
          	<Polytope file="legs" />
      		</Drawable>
-	</Frame>
-	<Frame name="legs2" refframe="WORLD" type="Fixed">
+	</Frame!-->
+	<!--Frame name="legs2" refframe="WORLD" type="Fixed">
 		<RPY>180 0 0</RPY> <Pos>0 0 0.6</Pos>		
 	 	<Drawable name="Table2" refframe="Table2">
          	<Polytope file="legs" />
      		</Drawable>
-	</Frame>
+	</Frame!-->
 		
 	<!--Frame name="u_arch1" refframe="WORLD" type="Fixed">
 		<RPY>180 0 0</RPY> <Pos>0 0.6 0.7</Pos>		
@@ -95,19 +95,19 @@
      		</Drawable>
 	</Frame!-->
 
-	<Frame name="Bottle" refframe="Table2"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0 1 0.40 </Pos>
+	<Frame name="Bottle" refframe="Table1"  type="Movable" daf="true" >
+     <RPY> -90 0 90 </RPY> <Pos> 0.25 -0.45 0.21 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>
 	</Frame>
 	
 	<Frame name="BottleGrip1" refframe="Bottle" type="Movable">
-		<RPY>0 0 180</RPY> <Pos>0 -0.025 0</Pos>
+		<RPY>0 0 0</RPY> <Pos>0 -0.025 0</Pos>
 	</Frame>
 
 	<Frame name="BottleGrip2" refframe="Bottle" type="Movable">
-		<RPY>0 0 180</RPY> <Pos>0 0.025 0</Pos>
+		<RPY>0 0 0</RPY> <Pos>0 0.025 0</Pos>
 	</Frame>
 
 	<Frame name="BottleTop" refframe="Bottle" type="Movable">
@@ -115,11 +115,11 @@
 	</Frame>
 
 	<Frame name="placeArea1" refframe="Table1" type="Fixed">
-		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.21</Pos>
+		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.22</Pos>
 	</Frame>
 
 	<Frame name="placeArea2" refframe="Table2" type="Fixed">
-		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.21</Pos>
+		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.22</Pos>
 	</Frame>
 
 	

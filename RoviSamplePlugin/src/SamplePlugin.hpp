@@ -131,6 +131,7 @@ public:
       int y1;
       int y2;
       std::vector<int> idx;
+      bool connect = false;
       float probability;
       float accumulatedProbability;
     };
@@ -202,6 +203,8 @@ private slots:
     void DualPath();
     bool DualCanConnect(rw::math::Q r1q1, rw::math::Q r1q2,rw::math::Q r2q1, rw::math::Q r2q2, rw::proximity::CollisionDetector::Ptr detector,rw::kinematics::State state,int splits);
 
+    void dualDemo();
+
     void LIPpath(QPath path1, QPath path2);
 
     void DualShortcut(QPath r1Path, QPath r2Path, int maxIterations);
@@ -223,7 +226,7 @@ private:
     QTimer* _timer;
     QTimer* _timer25D;
     float jointConstraints[6][2] = {{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-4.712,1.570},{-3.142,3.142},{-3.142,3.142}};
-    float jointWeights[6] = {3,2,2,1,1,1};
+    float jointWeights[6] = {4,3,2,2,1,1};
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;

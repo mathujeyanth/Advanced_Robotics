@@ -21,6 +21,7 @@ SamplePlugin::SamplePlugin():
     connect(_placeBottle    ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_home           ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
     connect(_printTest      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
+    connect(_demo      ,SIGNAL(pressed()),             this, SLOT(btnPressed()) );
 
     _framegrabber = NULL;
 }
@@ -125,6 +126,13 @@ void SamplePlugin::btnPressed() {
                                             ), _state);
 
         getRobWorkStudio()->setState(_state);
+    }
+    else if (obj == _demo)
+    {
+        cout << "Demo button pressed" << endl;
+        _timer->stop();
+        active_threads.push_back(std::thread(&SamplePlugin::dualDemo,this));
+        //dualDemo();
     }
     else if (obj == _printTest)
     {
@@ -1811,25 +1819,34 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         tempVec.push_back(curDualGraph.r1Start.size());
                         Our4Darray.Start.insert(iter,D4Node{x1,x2,y1,y2,tempVec,1,0});
                         cout << "x1: " << x1 << " x2: " << x2 << " y1: " << y1 << " y2: " << y2 << endl;
-                        cout << "Insert node with parent "<<  n1.parent << endl;
+                        cout << "Insert node with parent " <<  n1.parent << endl;
                         auto iter2 = std::find_if(Our4Darray.Goal.begin(),Our4Darray.Goal.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                         if (iter2 != Our4Darray.Goal.end())
                         {
+                            (*iter2).connect = true;
+                            (*iter).connect = true;
                             curDualGraph.r1Start.push_back(n1);
                             curDualGraph.r2Start.push_back(n2);
                             cout << "\tTrying to connect graphs\t" << endl;
-                            rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[0]].configuration;
-                            rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[0]].configuration;
-                            rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[0]].configuration;
-                            rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[0]].configuration;
-                            float someSum = ((q1-q3).norm2()+(q2-q4).norm2());
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Goal[0].configuration,n2.configuration,curDualGraph.r2Goal[0].configuration,detector,state,int(someSum)+1))
+                            for (int i = 0;i<(*iter).idx.size();i++)
                             {
-                                connectionIdx[0] = (*iter).idx[0];
-                                connectionIdx[1] = (*iter2).idx[0];
+                                for (int j = 0;j<(*iter2).idx.size();j++)
+                                {
+                                    rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[i]].configuration;
+                                    rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[i]].configuration;
+                                    rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[j]].configuration;
+                                    rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[j]].configuration;
+                                    float someSum = (weigthedNorm2(q1,q3)+weigthedNorm2(q2,q4))/2;
+                                    cout << "Splits: " << someSum << endl;
+                                    if ( DualCanConnect(q1,q3,q2,q4,detector,state,int(someSum)+1))
+                                    {
+                                        connectionIdx[0] = (*iter).idx[i];
+                                        connectionIdx[1] = (*iter2).idx[j];
 
-                                cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
-                                return;
+                                        cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
+                                        return;
+                                    }
+                                }
                             }
                             break;
                         }
@@ -1839,6 +1856,35 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         // insert element
                         (*iter).idx.push_back(curDualGraph.r1Start.size());
                         (*iter).probability = 1.0/float((*iter).idx.size());
+                        if ((*iter).connect)
+                        {
+                            auto iter2 = std::find_if(Our4Darray.Goal.begin(),Our4Darray.Goal.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
+                            if (iter2 != Our4Darray.Goal.end())
+                            {
+                                curDualGraph.r1Start.push_back(n1);
+                                curDualGraph.r2Start.push_back(n2);
+                                cout << "\tTrying to connect graphs\t" << endl;
+                                for (int j = 0;j<(*iter2).idx.size();j++)
+                                {
+                                    rw::math::Q q1 = curDualGraph.r1Start[(*iter).idx[(*iter).idx.size()-1]].configuration;
+                                    rw::math::Q q2 = curDualGraph.r2Start[(*iter).idx[(*iter).idx.size()-1]].configuration;
+                                    rw::math::Q q3 = curDualGraph.r1Goal[(*iter2).idx[j]].configuration;
+                                    rw::math::Q q4 = curDualGraph.r2Goal[(*iter2).idx[j]].configuration;
+                                    float someSum = (weigthedNorm2(q1,q3)+weigthedNorm2(q2,q4))/2;
+                                    cout << "Splits: " << someSum << endl;
+                                    if ( DualCanConnect(q1,q3,q2,q4,detector,state,int(someSum)+1))
+                                        {
+                                            connectionIdx[0] = (*iter).idx[(*iter).idx.size()-1];
+                                            connectionIdx[1] = (*iter2).idx[j];
+
+                                            cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
+                                            return;
+                                        }
+                                }
+
+                                break;
+                            }
+                        }
                         //cout << "Insert element" << endl;
 
                     }
@@ -1864,22 +1910,32 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         auto iter2 = std::find_if(Our4Darray.Start.begin(),Our4Darray.Start.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
                         if (iter2 != Our4Darray.Start.end())
                         {
+                            (*iter2).connect = true;
+                            (*iter).connect = true;
                             curDualGraph.r1Goal.push_back(n1);
                             curDualGraph.r2Goal.push_back(n2);
                             cout << "\tTrying to connect graphs\t" << endl;
-                            rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[0]].configuration;
-                            rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[0]].configuration;
-                            rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[0]].configuration;
-                            rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[0]].configuration;
-                            float someSum = ((q1-q3).norm2()+(q2-q4).norm2())/2;
-                            if ( DualCanConnect(n1.configuration,curDualGraph.r1Start[0].configuration,n2.configuration,curDualGraph.r2Start[0].configuration,detector,state,int(someSum)+1))
+                            for (int i = 0;i<(*iter).idx.size();i++)
                             {
-                                connectionIdx[0] = (*iter).idx[0];
-                                connectionIdx[1] = (*iter2).idx[0];
+                                for (int j = 0;j<(*iter2).idx.size();j++)
+                                {
+                                    rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[i]].configuration;
+                                    rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[i]].configuration;
+                                    rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[j]].configuration;
+                                    rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[j]].configuration;
+                                    float someSum = (weigthedNorm2(q1,q3)+weigthedNorm2(q2,q4))/2;
+                                    cout << "Splits: " << someSum << endl;
+                                    if ( DualCanConnect(q1,q3,q2,q4,detector,state,int(someSum)+1))
+                                    {
+                                        connectionIdx[1] = (*iter).idx[i];
+                                        connectionIdx[0] = (*iter2).idx[j];
 
-                                cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
-                                return;
+                                        cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
+                                        return;
+                                    }
+                                }
                             }
+
                             break;
                         }
                     }
@@ -1888,6 +1944,34 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
                         // insert element
                         (*iter).idx.push_back(curDualGraph.r1Goal.size());
                         (*iter).probability = 1.0/float((*iter).idx.size());
+                        if ((*iter).connect)
+                        {
+                            auto iter2 = std::find_if(Our4Darray.Start.begin(),Our4Darray.Start.end(),[&](const D4Node& ts){return ts.x1 == x1 && ts.x2 == x2 && ts.y1 == y1 && ts.y2 == y2;});
+                            if (iter2 != Our4Darray.Start.end())
+                            {
+                                curDualGraph.r1Goal.push_back(n1);
+                                curDualGraph.r2Goal.push_back(n2);
+                                cout << "\tTrying to connect graphs\t" << endl;
+                                for (int j = 0;j<(*iter2).idx.size();j++)
+                                {
+                                    rw::math::Q q1 = curDualGraph.r1Goal[(*iter).idx[(*iter).idx.size()-1]].configuration;
+                                    rw::math::Q q2 = curDualGraph.r2Goal[(*iter).idx[(*iter).idx.size()-1]].configuration;
+                                    rw::math::Q q3 = curDualGraph.r1Start[(*iter2).idx[j]].configuration;
+                                    rw::math::Q q4 = curDualGraph.r2Start[(*iter2).idx[j]].configuration;
+                                    float someSum = (weigthedNorm2(q1,q3)+weigthedNorm2(q2,q4))/2;
+                                    cout << "Splits: " << someSum << endl;
+                                    if ( DualCanConnect(q1,q3,q2,q4,detector,state,int(someSum)+1))
+                                        {
+                                            connectionIdx[1] = (*iter).idx[(*iter).idx.size()-1];
+                                            connectionIdx[0] = (*iter2).idx[j];
+
+                                            cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
+                                            return;
+                                        }
+                                }
+                                break;
+                            }
+                        }
                         //cout << "Insert element" << endl;
 
                     }
@@ -1910,6 +1994,250 @@ void SamplePlugin::DualPRM(rw::math::Q goalConfRobot1, rw::math::Q goalConfRobot
     connectionIdx[1] = 0;
     cout << "Time spent: "<< (myTimer.getTimeMs())/1000.0 <<"s" << endl;
     cout << "I failed you master :("<< endl;
+}
+
+void SamplePlugin::dualDemo(){
+    rw::kinematics::MovableFrame::Ptr Bottle = _wc->findFrame<rw::kinematics::MovableFrame>("Bottle");
+    rw::kinematics::FixedFrame::Ptr placeArea2 = _wc->findFrame<rw::kinematics::FixedFrame>("placeArea2");
+    rw::kinematics::MovableFrame::Ptr preMatingArea1 = _wc->findFrame<rw::kinematics::MovableFrame>("preMatingArea1");
+    rw::kinematics::MovableFrame::Ptr preMatingArea2 = _wc->findFrame<rw::kinematics::MovableFrame>("preMatingArea2");
+    rw::proximity::CollisionDetector::Ptr detector = rw::common::ownedPtr(new rw::proximity::CollisionDetector(_wc, rwlibs::proximitystrategies::ProximityStrategyFactory::makeDefaultCollisionStrategy()));
+
+    rw::kinematics::MovableFrame::Ptr matingArea = _wc->findFrame<rw::kinematics::MovableFrame>("matingArea");
+
+    rw::common::Timer myTimer;
+
+    const rw::math::Q gQ(1, 0.055);
+    robotPtr1.gripperDevice->setQ(gQ,_state);
+    robotPtr2.gripperDevice->setQ(gQ,_state);
+    rw::kinematics::State state = _state;
+
+    rw::math::Q r1Start = robotPtr1.robot->getQ(state), starting;
+    float bestSolution = 9999.9;
+
+    for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+        cout << "Pos: " << Bottle->getTransform(state).P() << endl;
+        Bottle->moveTo(
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(Bottle->getTransform(_state).P()),
+                                            rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,90*rw::math::Deg2Rad)
+                                            ), state);
+        std::vector<rw::math::Q> solutions = getConfigurations("BottleGrip1", "GraspTCP1", robotPtr1.robot, _wc, state);
+
+        for(unsigned int i=0; i<solutions.size(); i++){
+            // set the robot in that configuration and check if it is in collision
+            robotPtr1.robot->setQ(solutions[i], state);
+            if( !detector->inCollision(state,NULL,true) )
+            {
+                float curSolution = weigthedNorm2(solutions[i],r1Start);
+                if (curSolution<bestSolution)
+                {
+                    bestSolution = curSolution;
+                    starting = solutions[i];
+                }
+            }
+        }
+    }
+
+    //_device1->setQ(starting,_state);
+    //getRobWorkStudio()->setState(_state);
+    rw::math::Q r2Start(6, 1.571, -1.571, 0, 0, 1.571, 0);
+
+    DualPRM(starting,r2Start,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
+    DualPath();
+
+    int length;
+    _step = 0;
+    if (_path1.size() > _path2.size())
+        length = _path1.size();
+    else
+        length = _path2.size();
+
+    while(_step < length){
+        if (_step <_path1.size())
+            _device1->setQ(_path1.at(_step),_state);
+        if (_step <_path2.size())
+            _device2->setQ(_path2.at(_step),_state);
+
+        getRobWorkStudio()->setState(_state);
+        _step++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("GraspTCP1"),_state);
+    getRobWorkStudio()->setState(_state);
+
+    rw::math::Q preMate1, preMate2;
+
+    state = _state;
+    bestSolution = 9999.9;
+
+
+    for(double rollAngle=90; rollAngle<270.0; rollAngle+=5.0){ // for every degree around the roll axis
+        preMatingArea1->moveTo(
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(preMatingArea1->getTransform(_state).P()),
+                                            rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,90*rw::math::Deg2Rad)
+                                            ), state);
+        std::vector<rw::math::Q> solutions = getConfigurations("preMatingArea1", "GraspTCP1", robotPtr1.robot, _wc, state);
+
+        for(unsigned int i=0; i<solutions.size(); i++){
+            // set the robot in that configuration and check if it is in collision
+            robotPtr1.robot->setQ(solutions[i], state);
+            if( !detector->inCollision(state,NULL,true) )
+            {
+                float curSolution = weigthedNorm2(solutions[i],robotPtr1.robot->getQ(_state));
+                if (curSolution<bestSolution)
+                {
+                    bestSolution = curSolution;
+                    preMate1 = solutions[i];
+                }
+            }
+        }
+    }
+
+    cout << "preMate1: " << preMate1 << endl;
+    robotPtr1.robot->setQ(preMate1, state);
+    bestSolution = 9999.9;
+
+    DualPRM(preMate1,preMate1,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
+    DualPath();
+
+    _step = 0;
+    if (_path1.size() > _path2.size())
+        length = _path1.size();
+    else
+        length = _path2.size();
+
+    while(_step < length){
+        if (_step <_path1.size())
+            _device1->setQ(_path1.at(_step),_state);
+        if (_step <_path2.size())
+            _device2->setQ(_path2.at(_step),_state);
+
+        getRobWorkStudio()->setState(_state);
+        _step++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    bestSolution = 9999.9;
+    rw::math::Q Mate1, Mate2;
+    state = _state;
+    float savedYaw = 0;
+
+    for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+        matingArea->moveTo(
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(matingArea->getTransform(_state).P()),
+                                            rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,90*rw::math::Deg2Rad)
+                                            ), state);
+        std::vector<rw::math::Q> solutions = getConfigurations("matingArea", "GraspTCP1", robotPtr1.robot, _wc, state);
+
+        for(unsigned int i=0; i<solutions.size(); i++){
+            // set the robot in that configuration and check if it is in collision
+            robotPtr1.robot->setQ(solutions[i], state);
+            if( !detector->inCollision(state,NULL,true) )
+            {
+                float curSolution = weigthedNorm2(solutions[i],robotPtr1.robot->getQ(_state));
+                if (curSolution<bestSolution)
+                {
+                    bestSolution = curSolution;
+                    Mate1 = solutions[i];
+                    //savedYaw = yawAngle;
+                }
+            }
+        }
+    }
+    cout << "Mate1: " << Mate1 << endl;
+    robotPtr1.robot->setQ(Mate1, state);
+    rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("Table2"),state);
+    bestSolution = 9999.9;
+    for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+        Bottle->moveTo(
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(Bottle->getTransform(state).P()),
+                                            rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,90*rw::math::Deg2Rad)
+                                            ), state);
+        std::vector<rw::math::Q> solutions = getConfigurations("BottleGrip2", "GraspTCP2", robotPtr2.robot, _wc, state);
+
+        for(unsigned int i=0; i<solutions.size(); i++){
+            // set the robot in that configuration and check if it is in collision
+            robotPtr2.robot->setQ(solutions[i], state);
+            if( !detector->inCollision(state,NULL,true) )
+            {
+                float curSolution = weigthedNorm2(solutions[i],robotPtr2.robot->getQ(_state));
+                if (curSolution<bestSolution)
+                {
+                    bestSolution = curSolution;
+                    Mate2 = solutions[i];
+                }
+            }
+        }
+    }
+    cout << "Mate2: " << Mate2 << endl;
+    DualPRM(Mate1,Mate2,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
+    DualPath();
+
+    _step = 0;
+    if (_path1.size() > _path2.size())
+        length = _path1.size();
+    else
+        length = _path2.size();
+
+    while(_step < length){
+        if (_step <_path1.size())
+            _device1->setQ(_path1.at(_step),_state);
+        if (_step <_path2.size())
+            _device2->setQ(_path2.at(_step),_state);
+
+        getRobWorkStudio()->setState(_state);
+        _step++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("Table2"),_state);
+    rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("GraspTCP2"),_state);
+
+    state = _state;
+    rw::math::Q theEnd;
+    bestSolution = 9999.9;
+    rw::kinematics::Kinematics::gripFrame(_wc->findFrame("Bottle"),_wc->findFrame("Table2"),state);
+    for(double rollAngle=0; rollAngle<360.0; rollAngle+=10.0){ // for every degree around the roll axis
+        Bottle->moveTo(
+                    rw::math::Transform3D<>(rw::math::Vector3D<>(placeArea2->getTransform(_state).P()),
+                                            rw::math::RPY<>(rollAngle*rw::math::Deg2Rad,0,90*rw::math::Deg2Rad)
+                                            ), state);
+        std::vector<rw::math::Q> solutions = getConfigurations("BottleGrip2", "GraspTCP2", robotPtr2.robot, _wc, state);
+
+        for(unsigned int i=0; i<solutions.size(); i++){
+            // set the robot in that configuration and check if it is in collision
+            robotPtr2.robot->setQ(solutions[i], state);
+            if( !detector->inCollision(state,NULL,true) )
+            {
+                float curSolution = weigthedNorm2(solutions[i],robotPtr2.robot->getQ(_state));
+                if (curSolution<bestSolution)
+                {
+                    bestSolution = curSolution;
+                    theEnd = solutions[i];
+                }
+            }
+        }
+    }
+    cout << "The end: " << theEnd << endl;
+    DualPRM(r2Start,theEnd,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
+    DualPath();
+
+    _step = 0;
+    if (_path1.size() > _path2.size())
+        length = _path1.size();
+    else
+        length = _path2.size();
+
+    while(_step < length){
+        if (_step <_path1.size())
+            _device1->setQ(_path1.at(_step),_state);
+        if (_step <_path2.size())
+            _device2->setQ(_path2.at(_step),_state);
+
+        getRobWorkStudio()->setState(_state);
+        _step++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    cout << "Demo complete" << endl;
 }
 
 float SamplePlugin::weigthedNorm2(rw::math::Q q1, rw::math::Q q2)
@@ -1940,8 +2268,7 @@ void SamplePlugin::DualPath()
         r2Path.push_back(curDualGraph.r2Goal[index].configuration);
         cout << "Q: " << curDualGraph.r1Goal[index].configuration << " " << curDualGraph.r2Goal[index].configuration << endl;
         index = curDualGraph.r2Goal[index].parent;
-
-//        cout << "Parent: " << index << endl;
+        cout << "Parent: " << index << endl;
     }
 
     index = connectionIdx[0];
@@ -1953,7 +2280,7 @@ void SamplePlugin::DualPath()
         r2Path.insert(r2Path.begin(),curDualGraph.r2Start[index].configuration);
         cout << "Q: " << curDualGraph.r1Start[index].configuration << " " << curDualGraph.r2Start[index].configuration << endl;
         index = curDualGraph.r2Start[index].parent;
-
+        cout << "Parent: " << index << endl;
     }
     DualShortcut(r1Path,r2Path,20);
 }
@@ -1994,7 +2321,7 @@ void SamplePlugin::DualShortcut(QPath r1Path, QPath r2Path, int maxIterations)
         //int r_1 = rand()%(PathIdx.size()-2),r_2 = rand()%(PathIdx.size()-r_1-2) + (r_1 + 1),r_3 = rand()%(PathIdx.size()-r_2-1) + r_2, r_4 = rand()%(PathIdx.size()-r_3-1) + (r_3 + 1);
         int idx1 = rand()%(r1PathLIP.size()-2)+1, idx2 = rand()%(r1PathLIP.size()-idx1-1) + idx1;
 
-        int splits = int(ceil(weigthedNorm2(r1PathLIP[idx1],r1PathLIP[idx2])+weigthedNorm2(r2PathLIP[idx1],r2PathLIP[idx2])))+1;
+        int splits = int(ceil((weigthedNorm2(r1PathLIP[idx1],r1PathLIP[idx2])+weigthedNorm2(r2PathLIP[idx1],r2PathLIP[idx2]))/2))+1;
         cout << " splits:" << splits << endl;
         if (DualCanConnect(r1PathLIP[idx1],r1PathLIP[idx2],r2PathLIP[idx1],r2PathLIP[idx2],detector,state,splits))
         {
