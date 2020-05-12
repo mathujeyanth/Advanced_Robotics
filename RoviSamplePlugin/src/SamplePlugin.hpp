@@ -235,8 +235,11 @@ private:
 
     Device::Ptr _device2;
     Device::Ptr _device1;
+    QPath _PPpath1;
+    QPath _PPpath2;
     QPath _path1;
     QPath _path2;
+    int _printCounter = 0;
     int _step;
     int _attachIdx;
     Q _attachQ;

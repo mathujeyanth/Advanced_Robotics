@@ -2044,7 +2044,7 @@ void SamplePlugin::dualDemo(){
 
     DualPRM(starting,r2Start,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
     DualPath();
-
+    printDualTree();
     int length;
     _step = 0;
     if (_path1.size() > _path2.size())
@@ -2100,7 +2100,7 @@ void SamplePlugin::dualDemo(){
 
     DualPRM(preMate1,preMate1,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
     DualPath();
-
+    printDualTree();
     _step = 0;
     if (_path1.size() > _path2.size())
         length = _path1.size();
@@ -2172,7 +2172,7 @@ void SamplePlugin::dualDemo(){
     cout << "Mate2: " << Mate2 << endl;
     DualPRM(Mate1,Mate2,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
     DualPath();
-
+    printDualTree();
     _step = 0;
     if (_path1.size() > _path2.size())
         length = _path1.size();
@@ -2220,7 +2220,7 @@ void SamplePlugin::dualDemo(){
     cout << "The end: " << theEnd << endl;
     DualPRM(r2Start,theEnd,_state,_maxIteration->value(),_jointStepSize->value(),_cellSize->value());
     DualPath();
-
+    printDualTree();
     _step = 0;
     if (_path1.size() > _path2.size())
         length = _path1.size();
@@ -2292,27 +2292,11 @@ void SamplePlugin::DualShortcut(QPath r1Path, QPath r2Path, int maxIterations)
     rw::kinematics::State state = _state;
     int iteration = 0;
 
-    // Create LIP paths and find idxes of the original Q'
     LIPpath(r1Path,r2Path);
     QPath r1PathLIP = _path1;
     QPath r2PathLIP = _path2;
-//    vector<int> PathIdx;
-//    int curIdx = 0;
-//    float min = 9999.9;
-//    for(int i = 0;i<r1PathLIP.size();i++)
-//    {
-//        float dist = (r1PathLIP[i]-r1Path[curIdx]).norm2();
-//        if (dist < min)
-//        {
-//            min = dist;
-//        }
-//        else
-//        {
-//            curIdx++;
-//            min = (r1PathLIP[i]-r1Path[curIdx]).norm2();
-//            PathIdx.push_back(i-1);
-//        }
-//    }
+    _PPpath1 = _path1;
+    _PPpath2 = _path2;
     cout << "Path length before pruning: " << r1PathLIP.size() << endl;
     myTimer.resetAndResume();
     while(iteration < maxIterations)
@@ -2336,18 +2320,6 @@ void SamplePlugin::DualShortcut(QPath r1Path, QPath r2Path, int maxIterations)
 
             QPath::iterator it1 = r1PathLIP.begin()+idx1, it2 = r1PathLIP.begin()+idx2;
             QPath::iterator it3 = r2PathLIP.begin()+idx1, it4 = r2PathLIP.begin()+idx2;
-
-//           int difIdxBefore = idx2-idx1, difIdxAfter = _path1.size();
-//            for (int i = r_1+1;i<PathIdx.size();i++)
-//            {
-//                if (i < idx2)
-//                {
-//                    PathIdx.erase(PathIdx.begin()+i);
-//                    i--;
-//                }
-//                else
-//                    PathIdx[i] = (PathIdx[i]-difIdxBefore) + difIdxAfter;
-//            }
 
             r1PathLIP.erase(it1,it2);
             for (int i = 0;i<_path1.size();i++)
@@ -2463,8 +2435,8 @@ void SamplePlugin::LIPpath(QPath path1, QPath path2) // Linear interpolation
 void SamplePlugin::printDualTree()
 {
     rw::kinematics::State state = _state;
-    std::ofstream r1GoalGrap("r1GoalGraph.txt"); //Save the positions of all the nodes in the tree
-    std::ofstream r2GoalGrap("r2GoalGraph.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r1GoalGrap(to_string(_printCounter)+"r1GoalGraph.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r2GoalGrap(to_string(_printCounter)+"r2GoalGraph.txt"); //Save the positions of all the nodes in the tree
     for(int i = 0; i<curDualGraph.r1Goal.size();i++) {
         robotPtr1.robot->setQ(curDualGraph.r1Goal[i].configuration,state);
         robotPtr2.robot->setQ(curDualGraph.r2Goal[i].configuration,state);
@@ -2481,8 +2453,8 @@ void SamplePlugin::printDualTree()
     }
     r1GoalGrap.close();
     r2GoalGrap.close();
-    std::ofstream r1StartGrap("r1StartGraph.txt"); //Save the positions of all the nodes in the tree
-    std::ofstream r2StartGrap("r2StartGraph.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r1StartGrap(to_string(_printCounter)+"r1StartGraph.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r2StartGrap(to_string(_printCounter)+"r2StartGraph.txt"); //Save the positions of all the nodes in the tree
     for(int i = 0; i<curDualGraph.r1Start.size();i++) {
         robotPtr1.robot->setQ(curDualGraph.r1Start[i].configuration,state);
         robotPtr2.robot->setQ(curDualGraph.r2Start[i].configuration,state);
@@ -2500,8 +2472,27 @@ void SamplePlugin::printDualTree()
     r1StartGrap.close();
     r2StartGrap.close();
 
-    std::ofstream r1Path("r1Path.txt"); //Save the positions of all the nodes in the tree
-    std::ofstream r2Path("r2Path.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r1PPPath(to_string(_printCounter)+"r1PPPath.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r2PPPath(to_string(_printCounter)+"r2PPPath.txt"); //Save the positions of all the nodes in the tree
+    for(int i = 0; i<_path1.size();i++) {
+        robotPtr1.robot->setQ(_path1[i],state);
+        robotPtr2.robot->setQ(_path2[i],state);
+        rw::math::Vector3D<> pos = rw::kinematics::Kinematics::worldTframe(robotPtr1.robotTCP,state).P();
+        for(int j=0; j<3;j++){
+            r1PPPath << pos[j] << " ";
+        }
+        r1PPPath << '\n';
+        pos = rw::kinematics::Kinematics::worldTframe(robotPtr2.robotTCP,state).P();
+        for(int j=0; j<3;j++){
+            r2PPPath << pos[j] << " ";
+        }
+        r2PPPath << '\n';
+    }
+    r1PPPath.close();
+    r2PPPath.close();
+
+    std::ofstream r1Path(to_string(_printCounter)+"r1Path.txt"); //Save the positions of all the nodes in the tree
+    std::ofstream r2Path(to_string(_printCounter)+"r2Path.txt"); //Save the positions of all the nodes in the tree
     for(int i = 0; i<_path1.size();i++) {
         robotPtr1.robot->setQ(_path1[i],state);
         robotPtr2.robot->setQ(_path2[i],state);
@@ -2518,6 +2509,7 @@ void SamplePlugin::printDualTree()
     }
     r1Path.close();
     r2Path.close();
+    _printCounter++;
 }
 
 int SamplePlugin::randExpand(bool start)

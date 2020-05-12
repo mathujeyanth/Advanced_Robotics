@@ -96,7 +96,7 @@
 	</Frame!-->
 
 	<Frame name="Bottle" refframe="Table1"  type="Movable" daf="true" >
-     <RPY> -90 0 90 </RPY> <Pos> 0.25 -0.45 0.21 </Pos>
+     <RPY> -90 0 90 </RPY> <Pos> 0.20 -0.40 0.22 </Pos>
      <Drawable name="Bottle" refframe="Bottle">
          <Polytope file="parts/bottle" />
      </Drawable>
@@ -115,11 +115,11 @@
 	</Frame>
 
 	<Frame name="placeArea1" refframe="Table1" type="Fixed">
-		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.22</Pos>
+		<RPY>0 0 90</RPY> <Pos>0.20 -0.40 0.22</Pos>
 	</Frame>
 
 	<Frame name="placeArea2" refframe="Table2" type="Fixed">
-		<RPY>0 0 90</RPY> <Pos>0.3 -0.5 0.22</Pos>
+		<RPY>0 0 90</RPY> <Pos>0.20 -0.40 0.22</Pos>
 	</Frame>
 
 	
