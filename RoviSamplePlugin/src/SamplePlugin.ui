@@ -76,9 +76,45 @@
       <item>
        <widget class="QPushButton" name="_printTest">
         <property name="text">
-         <string>Print test</string>
+         <string>Calc optimal mating pose</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QPushButton" name="grip_1_pose_init_button">
+          <property name="text">
+           <string>gripper 1 initial pose</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="grip_2_pose_init_button">
+          <property name="text">
+           <string>gripper 2 initial pose</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QPushButton" name="grip_1_pose_final_button">
+          <property name="text">
+           <string>gripper 1 final pose</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="grip_2_pose_final_button">
+          <property name="text">
+           <string>gripper 2 final pose</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="QDoubleSpinBox" name="_doubleSpinBox"/>

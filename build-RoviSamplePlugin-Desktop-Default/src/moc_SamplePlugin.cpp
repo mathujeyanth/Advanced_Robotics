@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_SamplePlugin_t {
-    QByteArrayData data[40];
-    char stringdata0[427];
+    QByteArrayData data[63];
+    char stringdata0[681];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -71,7 +71,30 @@ QT_MOC_LITERAL(35, 398, 7), // "wrapMax"
 QT_MOC_LITERAL(36, 406, 1), // "x"
 QT_MOC_LITERAL(37, 408, 3), // "max"
 QT_MOC_LITERAL(38, 412, 10), // "wrapMinMax"
-QT_MOC_LITERAL(39, 423, 3) // "min"
+QT_MOC_LITERAL(39, 423, 3), // "min"
+QT_MOC_LITERAL(40, 427, 27), // "findBestHandoverOrientation"
+QT_MOC_LITERAL(41, 455, 15), // "Eigen::Matrix3f"
+QT_MOC_LITERAL(42, 471, 23), // "xyzrpyToTransformMatrix"
+QT_MOC_LITERAL(43, 495, 15), // "Eigen::Matrix4f"
+QT_MOC_LITERAL(44, 511, 2), // "tx"
+QT_MOC_LITERAL(45, 514, 2), // "ty"
+QT_MOC_LITERAL(46, 517, 2), // "tz"
+QT_MOC_LITERAL(47, 520, 2), // "rz"
+QT_MOC_LITERAL(48, 523, 2), // "ry"
+QT_MOC_LITERAL(49, 526, 2), // "rx"
+QT_MOC_LITERAL(50, 529, 10), // "createTree"
+QT_MOC_LITERAL(51, 540, 19), // "rw::geometry::Plane"
+QT_MOC_LITERAL(52, 560, 6), // "aPlane"
+QT_MOC_LITERAL(53, 567, 8), // "robotNum"
+QT_MOC_LITERAL(54, 576, 4), // "size"
+QT_MOC_LITERAL(55, 581, 29), // "staticxyzrpyToTransformMatrix"
+QT_MOC_LITERAL(56, 611, 16), // "Eigen::Matrix4d&"
+QT_MOC_LITERAL(57, 628, 5), // "_pose"
+QT_MOC_LITERAL(58, 634, 14), // "boost_get_path"
+QT_MOC_LITERAL(59, 649, 11), // "rw::math::Q"
+QT_MOC_LITERAL(60, 661, 5), // "start"
+QT_MOC_LITERAL(61, 667, 4), // "goal"
+QT_MOC_LITERAL(62, 672, 8) // "saveTree"
 
     },
     "SamplePlugin\0btnPressed\0\0timer\0"
@@ -85,7 +108,14 @@ QT_MOC_LITERAL(39, 423, 3) // "min"
     "createPtPPath\0rw::math::Vector3D<>\0"
     "to\0createPtPiPath\0createPathRRTConnect\0"
     "eps\0TCMP\0BottlePRM\0fRand\0fMin\0fMax\0"
-    "wrapMax\0x\0max\0wrapMinMax\0min"
+    "wrapMax\0x\0max\0wrapMinMax\0min\0"
+    "findBestHandoverOrientation\0Eigen::Matrix3f\0"
+    "xyzrpyToTransformMatrix\0Eigen::Matrix4f\0"
+    "tx\0ty\0tz\0rz\0ry\0rx\0createTree\0"
+    "rw::geometry::Plane\0aPlane\0robotNum\0"
+    "size\0staticxyzrpyToTransformMatrix\0"
+    "Eigen::Matrix4d&\0_pose\0boost_get_path\0"
+    "rw::math::Q\0start\0goal\0saveTree"
 };
 #undef QT_MOC_LITERAL
 
@@ -95,7 +125,7 @@ static const uint qt_meta_data_SamplePlugin[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      13,   14, // methods
+      19,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -103,19 +133,25 @@ static const uint qt_meta_data_SamplePlugin[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   79,    2, 0x08 /* Private */,
-       3,    0,   80,    2, 0x08 /* Private */,
-       4,    1,   81,    2, 0x08 /* Private */,
-       7,    5,   84,    2, 0x08 /* Private */,
-      16,    4,   95,    2, 0x08 /* Private */,
-      24,    1,  104,    2, 0x08 /* Private */,
-      27,    1,  107,    2, 0x08 /* Private */,
-      28,    2,  110,    2, 0x08 /* Private */,
-      30,    0,  115,    2, 0x08 /* Private */,
-      31,    0,  116,    2, 0x08 /* Private */,
-      32,    2,  117,    2, 0x08 /* Private */,
-      35,    2,  122,    2, 0x08 /* Private */,
-      38,    3,  127,    2, 0x08 /* Private */,
+       1,    0,  109,    2, 0x08 /* Private */,
+       3,    0,  110,    2, 0x08 /* Private */,
+       4,    1,  111,    2, 0x08 /* Private */,
+       7,    5,  114,    2, 0x08 /* Private */,
+      16,    4,  125,    2, 0x08 /* Private */,
+      24,    1,  134,    2, 0x08 /* Private */,
+      27,    1,  137,    2, 0x08 /* Private */,
+      28,    2,  140,    2, 0x08 /* Private */,
+      30,    0,  145,    2, 0x08 /* Private */,
+      31,    0,  146,    2, 0x08 /* Private */,
+      32,    2,  147,    2, 0x08 /* Private */,
+      35,    2,  152,    2, 0x08 /* Private */,
+      38,    3,  157,    2, 0x08 /* Private */,
+      40,    0,  164,    2, 0x08 /* Private */,
+      42,    6,  165,    2, 0x08 /* Private */,
+      50,    4,  178,    2, 0x08 /* Private */,
+      55,    7,  187,    2, 0x08 /* Private */,
+      58,    2,  202,    2, 0x08 /* Private */,
+      62,    1,  207,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -131,6 +167,12 @@ static const uint qt_meta_data_SamplePlugin[] = {
     QMetaType::Double, QMetaType::Double, QMetaType::Double,   33,   34,
     QMetaType::Double, QMetaType::Double, QMetaType::Double,   36,   37,
     QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double,   36,   39,   37,
+    0x80000000 | 41,
+    0x80000000 | 43, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double,   44,   45,   46,   47,   48,   49,
+    QMetaType::Void, 0x80000000 | 51, 0x80000000 | 5, QMetaType::Int, QMetaType::Int,   52,    6,   53,   54,
+    QMetaType::Void, 0x80000000 | 56, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double, QMetaType::Double,   57,   44,   45,   46,   47,   48,   49,
+    0x80000000 | 8, 0x80000000 | 59, 0x80000000 | 59,   60,   61,
+    QMetaType::Void, QMetaType::Int,   53,
 
        0        // eod
 };
@@ -159,6 +201,15 @@ void SamplePlugin::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
             if (_a[0]) *reinterpret_cast< double*>(_a[0]) = std::move(_r); }  break;
         case 12: { double _r = _t->wrapMinMax((*reinterpret_cast< double(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])),(*reinterpret_cast< double(*)>(_a[3])));
             if (_a[0]) *reinterpret_cast< double*>(_a[0]) = std::move(_r); }  break;
+        case 13: { Eigen::Matrix3f _r = _t->findBestHandoverOrientation();
+            if (_a[0]) *reinterpret_cast< Eigen::Matrix3f*>(_a[0]) = std::move(_r); }  break;
+        case 14: { Eigen::Matrix4f _r = _t->xyzrpyToTransformMatrix((*reinterpret_cast< double(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])),(*reinterpret_cast< double(*)>(_a[3])),(*reinterpret_cast< double(*)>(_a[4])),(*reinterpret_cast< double(*)>(_a[5])),(*reinterpret_cast< double(*)>(_a[6])));
+            if (_a[0]) *reinterpret_cast< Eigen::Matrix4f*>(_a[0]) = std::move(_r); }  break;
+        case 15: _t->createTree((*reinterpret_cast< rw::geometry::Plane(*)>(_a[1])),(*reinterpret_cast< rw::kinematics::State(*)>(_a[2])),(*reinterpret_cast< int(*)>(_a[3])),(*reinterpret_cast< int(*)>(_a[4]))); break;
+        case 16: _t->staticxyzrpyToTransformMatrix((*reinterpret_cast< Eigen::Matrix4d(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])),(*reinterpret_cast< double(*)>(_a[3])),(*reinterpret_cast< double(*)>(_a[4])),(*reinterpret_cast< double(*)>(_a[5])),(*reinterpret_cast< double(*)>(_a[6])),(*reinterpret_cast< double(*)>(_a[7]))); break;
+        case 17: { std::vector<rw::math::Q> _r = _t->boost_get_path((*reinterpret_cast< rw::math::Q(*)>(_a[1])),(*reinterpret_cast< rw::math::Q(*)>(_a[2])));
+            if (_a[0]) *reinterpret_cast< std::vector<rw::math::Q>*>(_a[0]) = std::move(_r); }  break;
+        case 18: _t->saveTree((*reinterpret_cast< int(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -191,13 +242,13 @@ int SamplePlugin::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 13)
+        if (_id < 19)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 13;
+        _id -= 19;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 13)
+        if (_id < 19)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 13;
+        _id -= 19;
     }
     return _id;
 }

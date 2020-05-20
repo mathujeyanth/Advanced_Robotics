@@ -19,7 +19,7 @@
 // RobWorkStudio includes
 #include <RobWorkStudioConfig.hpp> // For RWS_USE_QT5 definition
 #include <rws/RobWorkStudioPlugin.hpp>
-
+#include <rw/invkin/ClosedFormIKSolverUR.hpp>
 // OpenCV 3
 //#include <opencv2/opencv.hpp>
 
@@ -97,6 +97,14 @@ private slots:
     double fRand(double fMin, double fMax); //Random Double generator
     double wrapMax(double x, double max);
     double wrapMinMax(double x, double min, double max);
+    Eigen::Matrix3f findBestHandoverOrientation();
+    Eigen::Matrix4f xyzrpyToTransformMatrix(double tx, double ty, double tz, double rz, double ry, double rx);
+    void createTree(rw::geometry::Plane aPlane,rw::kinematics::State state, int robotNum, int size);
+
+    static void staticxyzrpyToTransformMatrix(Eigen::Matrix4d &_pose, double tx, double ty, double tz, double rz, double ry, double rx);
+    std::vector<rw::math::Q> boost_get_path(rw::math::Q start, rw::math::Q goal);
+    void saveTree(int robotNum);
+
 
 private:
     //static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
@@ -119,6 +127,27 @@ private:
     Q _deattachQ;
     std::vector<int> printAblePathSize;
     std::vector<double> printAbleDurations;
+    struct connections{
+            double cost; // Difference in configuration space
+            double distance; // Difference in 3D space
+            int index; // index of node
+        };
+
+        struct graphNode{
+            std::vector<connections> connectionVec;
+            rw::math::Q configuration;
+            rw::math::Vector3D<> postion;
+            rw::math::Vector3D<> rotation;
+        };
+
+        struct graph{
+            std::vector<graphNode> nodeVec;
+        } robot1Graph,robot2Graph;
+    Q robot_1_initial_config,robot_2_initial_config;
+    Q robot_1_final_config,robot_2_final_config;
+
+    std::vector<rw::math::Q> get_path(rw::math::Q start, rw::math::Q goal, const graph query_path);
+
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/

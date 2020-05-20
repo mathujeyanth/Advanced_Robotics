@@ -15,6 +15,7 @@
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QDoubleSpinBox>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
@@ -39,6 +40,12 @@ public:
     QPushButton *_btn0;
     QPushButton *_btn1;
     QPushButton *_printTest;
+    QHBoxLayout *horizontalLayout;
+    QPushButton *grip_1_pose_init_button;
+    QPushButton *grip_2_pose_init_button;
+    QHBoxLayout *horizontalLayout_2;
+    QPushButton *grip_1_pose_final_button;
+    QPushButton *grip_2_pose_final_button;
     QDoubleSpinBox *_doubleSpinBox;
     QSlider *_slider;
     QLabel *_label;
@@ -99,6 +106,36 @@ public:
 
         verticalLayout->addWidget(_printTest);
 
+        horizontalLayout = new QHBoxLayout();
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
+        grip_1_pose_init_button = new QPushButton(dockWidgetContents);
+        grip_1_pose_init_button->setObjectName(QStringLiteral("grip_1_pose_init_button"));
+
+        horizontalLayout->addWidget(grip_1_pose_init_button);
+
+        grip_2_pose_init_button = new QPushButton(dockWidgetContents);
+        grip_2_pose_init_button->setObjectName(QStringLiteral("grip_2_pose_init_button"));
+
+        horizontalLayout->addWidget(grip_2_pose_init_button);
+
+
+        verticalLayout->addLayout(horizontalLayout);
+
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
+        grip_1_pose_final_button = new QPushButton(dockWidgetContents);
+        grip_1_pose_final_button->setObjectName(QStringLiteral("grip_1_pose_final_button"));
+
+        horizontalLayout_2->addWidget(grip_1_pose_final_button);
+
+        grip_2_pose_final_button = new QPushButton(dockWidgetContents);
+        grip_2_pose_final_button->setObjectName(QStringLiteral("grip_2_pose_final_button"));
+
+        horizontalLayout_2->addWidget(grip_2_pose_final_button);
+
+
+        verticalLayout->addLayout(horizontalLayout_2);
+
         _doubleSpinBox = new QDoubleSpinBox(dockWidgetContents);
         _doubleSpinBox->setObjectName(QStringLiteral("_doubleSpinBox"));
 
@@ -136,7 +173,11 @@ public:
         _btnPtPi->setText(QApplication::translate("SamplePlugin", "Calculate PtP with parabolic blend path", Q_NULLPTR));
         _btn0->setText(QApplication::translate("SamplePlugin", "Calculate RRT path", Q_NULLPTR));
         _btn1->setText(QApplication::translate("SamplePlugin", "Run Path", Q_NULLPTR));
-        _printTest->setText(QApplication::translate("SamplePlugin", "Print test", Q_NULLPTR));
+        _printTest->setText(QApplication::translate("SamplePlugin", "Calc optimal mating pose", Q_NULLPTR));
+        grip_1_pose_init_button->setText(QApplication::translate("SamplePlugin", "gripper 1 initial pose", Q_NULLPTR));
+        grip_2_pose_init_button->setText(QApplication::translate("SamplePlugin", "gripper 2 initial pose", Q_NULLPTR));
+        grip_1_pose_final_button->setText(QApplication::translate("SamplePlugin", "gripper 1 final pose", Q_NULLPTR));
+        grip_2_pose_final_button->setText(QApplication::translate("SamplePlugin", "gripper 2 final pose", Q_NULLPTR));
         _label->setText(QApplication::translate("SamplePlugin", "Label", Q_NULLPTR));
     } // retranslateUi
 
